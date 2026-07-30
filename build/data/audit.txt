@@ -1,0 +1,6 @@
+2026-07-21 23:48:46|ADMIN_LOGIN|Admin logged in successfully
+2026-07-21 23:49:47|CREATE_ACCOUNT|Created account 1001 for sham
+2026-07-21 23:50:18|ADMIN_LOGOUT|Admin logged out
+2026-07-21 23:50:41|ATM_LOGIN_SUCCESS|Account 1001 logged in
+2026-07-21 23:51:09|WITHDRAWAL|Account 1001 withdrew Rs. 2500
+2026-07-21 23:53:05|ATM_LOGOUT|Account 1001 logged out

@@ -1,0 +1,2 @@
+TXN659787|1001|deposit|25000.00|2026-07-21 23:49:47|25000.00|Initial deposit on account creation
+TXN659870|1001|withdrawal|2500.00|2026-07-21 23:51:09|22500.00|Cash withdrawal at ATM
