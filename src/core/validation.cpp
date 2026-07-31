@@ -1,4 +1,4 @@
-#include "core/validation.h"
+#include "validation.h"
 #include <algorithm>
 #include <cctype>
 

@@ -8,7 +8,85 @@
 #include <algorithm>
 #include <cmath>
 
+
 using namespace Theme;
+
+const string ADMIN_PASSWORD = "admin123";
+
+// ============================
+// VOICE ASSISTANT
+// ============================
+struct SpeakData {
+    string text;
+};
+
+static DWORD WINAPI SpeakThread(LPVOID lpParam) {
+    SpeakData* data = (SpeakData*)lpParam;
+    string escaped = data->text;
+    delete data;
+
+    size_t pos = 0;
+    while ((pos = escaped.find("'", pos)) != string::npos) {
+        escaped.insert(pos, "'");
+        pos += 2;
+    }
+
+    string cmd = "powershell -NoProfile -Command \"Add-Type -AssemblyName System.Speech; "
+                 "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+                 "$s.Speak('" + escaped + "')\"";
+
+    SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
+    PROCESS_INFORMATION pi = {};
+    STARTUPINFO si = {};
+    si.cb = sizeof(STARTUPINFO);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
+    CreateProcess(NULL, &cmd[0], &sa, &sa, TRUE,
+                  CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+    if (pi.hProcess) {
+        WaitForSingleObject(pi.hProcess, 8000);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+    }
+    return 0;
+}
+
+static void SpeakText(const string& text) {
+    SpeakData* data = new SpeakData();
+    data->text = text;
+    CreateThread(NULL, 0, SpeakThread, data, 0, NULL);
+}
+
+static string ScreenGuide(Screen screen) {
+    switch (screen) {
+        case SCR_LOGIN:      return "Welcome to National Bank. Please select Bank Administrator for admin panel, or ATM Customer for ATM services.";
+        case SCR_ADMIN_LOGIN:return "Admin login. Please enter your administrator password.";
+        case SCR_ADMIN_DASH: return "Admin dashboard. View account overview, recent transactions, and system statistics.";
+        case SCR_ADMIN_CREATE:return "Create a new bank account. Fill in name, CNIC, account type, balance, and PIN.";
+        case SCR_ADMIN_VIEW: return "View all registered bank accounts with their details and status.";
+        case SCR_ADMIN_SEARCH:return "Search for a specific account by account number.";
+        case SCR_ADMIN_FREEZE:return "Freeze an account to disable all ATM transactions.";
+        case SCR_ADMIN_UNFREEZE:return "Unfreeze a previously frozen account.";
+        case SCR_ADMIN_UNLOCK:return "Unlock a locked account and reset PIN attempts.";
+        case SCR_ADMIN_TXNS: return "View complete transaction history for all accounts.";
+        case SCR_ADMIN_SEARCH_TXN:return "Search transactions by account number, type, date range, or amount.";
+        case SCR_ADMIN_AUDIT: return "View system audit log with all administrative actions.";
+        case SCR_ADMIN_LOANS: return "Loan management. Approve new loans and view existing loans.";
+        case SCR_ADMIN_CASH: return "View ATM cash inventory and denomination counts.";
+        case SCR_ADMIN_DAILY:return "View daily summary report of deposits, withdrawals, and transfers.";
+        case SCR_ATM_LOGIN:  return "ATM login. Enter your account number and PIN to access ATM services.";
+        case SCR_ATM_MENU:   return "ATM main menu. Choose from balance inquiry, deposit, withdraw, transfer, mini statement, or change PIN.";
+        case SCR_ATM_BALANCE:return "Check your account balance by entering your account number and PIN.";
+        case SCR_ATM_DEPOSIT:return "Deposit cash into your account. Enter account number and amount.";
+        case SCR_ATM_WITHDRAW:return "Withdraw cash from your account. Enter the amount to withdraw.";
+        case SCR_ATM_TRANSFER:return "Transfer funds to another account. Enter target account number and amount.";
+        case SCR_ATM_MINISTATE:return "View your recent transactions and mini statement.";
+        case SCR_ATM_CHANGEPIN:return "Change your account PIN. Enter current PIN, new PIN, and confirm.";
+        case SCR_ATM_INFO:  return "ATM information screen showing machine details and cash availability.";
+        case SCR_OTP:       return "OTP verification. A one time password has been sent for large transfer verification. Please enter the OTP code.";
+        default: return "";
+    }
+}
 
 // --- Control IDs ---
 enum CtrlID {
@@ -371,6 +449,38 @@ static void PaintLoginScreen(HDC hdc, RECT rc) {
     TxtCenter(hdc, "Select your portal:", cx - 200, cy - 55, 400, 25, hFontBold, Text);
 }
 
+static void PaintATMLoginScreen(HDC hdc, RECT rc) {
+    int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+    int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+
+    DrawCard(hdc, cx - 200, cy - 130, 400, 260);
+    TxtCenter(hdc, "ATM Customer Login", cx - 200, cy - 110, 400, 40, hFontTitle, Primary);
+    TxtCenter(hdc, "Enter your account number and PIN", cx - 200, cy - 65, 400, 25, hFontSmall, TextLight);
+
+    HPEN linePen = CreatePen(PS_SOLID, 1, CardBorder);
+    HPEN old = (HPEN)SelectObject(hdc, linePen);
+    MoveToEx(hdc, cx - 160, cy - 40, NULL);
+    LineTo(hdc, cx + 160, cy - 40);
+    SelectObject(hdc, old);
+    DeleteObject(linePen);
+}
+
+static void PaintAdminLoginScreen(HDC hdc, RECT rc) {
+    int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+    int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+
+    DrawCard(hdc, cx - 200, cy - 130, 400, 260);
+    TxtCenter(hdc, "Admin Login", cx - 200, cy - 110, 400, 40, hFontTitle, Primary);
+    TxtCenter(hdc, "Enter administrator password", cx - 200, cy - 65, 400, 25, hFontSmall, TextLight);
+
+    HPEN linePen = CreatePen(PS_SOLID, 1, CardBorder);
+    HPEN old = (HPEN)SelectObject(hdc, linePen);
+    MoveToEx(hdc, cx - 160, cy - 40, NULL);
+    LineTo(hdc, cx + 160, cy - 40);
+    SelectObject(hdc, old);
+    DeleteObject(linePen);
+}
+
 static void PaintAdminDash(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 25;
     int sy = HEADER_H + 25;
@@ -387,8 +497,6 @@ static void PaintAdminDash(HDC hdc, RECT rc) {
     DeleteObject(linePen);
 
     loadAccounts(g.accounts);
-    loadAccounts(g.accounts);
-    loadTransactions(g.transactions);
     loadTransactions(g.transactions);
 
     int totalAcc = (int)g.accounts.size();
@@ -400,18 +508,20 @@ static void PaintAdminDash(HDC hdc, RECT rc) {
     }
     int totalTxn = (int)g.transactions.size();
 
-    struct CardData { const char* title; const char* value; COLORREF clr; };
-    CardData cards[] = {
-        {"Total Accounts", to_string(totalAcc).c_str(), Secondary},
-        {"Active Accounts", to_string(activeAcc).c_str(), Success},
-        {"Total Balance", "", Accent},
-        {"Transactions", to_string(totalTxn).c_str(), RGB(156,39,176)},
-    };
-
+    string strTotalAcc = to_string(totalAcc);
+    string strActiveAcc = to_string(activeAcc);
+    string strTotalTxn = to_string(totalTxn);
     stringstream balSS;
     balSS << "Rs. " << fixed << setprecision(0) << totalBal;
-    string balStr = balSS.str();
-    cards[2].value = balStr.c_str();
+    string strTotalBal = balSS.str();
+
+    struct CardData { string title; string value; COLORREF clr; };
+    CardData cards[] = {
+        {"Total Accounts", strTotalAcc, Secondary},
+        {"Active Accounts", strActiveAcc, Success},
+        {"Total Balance", strTotalBal, Accent},
+        {"Transactions", strTotalTxn, RGB(156,39,176)},
+    };
 
     int cardW = (cw - 45) / 4;
     for (int i = 0; i < 4; i++) {
@@ -430,8 +540,8 @@ static void PaintAdminDash(HDC hdc, RECT rc) {
         DeleteObject(iconBr);
         DeleteObject(iconPen);
 
-        Txt(hdc, cards[i].title, cx + 60, cy + 15, hFontSmall, TextLight);
-        Txt(hdc, cards[i].value, cx + 60, cy + 42, hFontHeading, Text);
+        Txt(hdc, cards[i].title.c_str(), cx + 60, cy + 15, hFontSmall, TextLight);
+        Txt(hdc, cards[i].value.c_str(), cx + 60, cy + 42, hFontHeading, Text);
     }
 
     int recentY = sy + 175;
@@ -1233,7 +1343,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
 
     switch (g.screen) {
         case SCR_LOGIN: PaintLoginScreen(hdc, rc); break;
-        case SCR_ADMIN_LOGIN: PaintLoginScreen(hdc, rc); break;
+        case SCR_ADMIN_LOGIN: PaintAdminLoginScreen(hdc, rc); break;
         case SCR_ADMIN_DASH: PaintAdminDash(hdc, rc); break;
         case SCR_ADMIN_CREATE: PaintCreateAccount(hdc, rc); break;
         case SCR_ADMIN_VIEW: PaintViewAccounts(hdc, rc); break;
@@ -1247,7 +1357,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
         case SCR_ADMIN_LOANS: PaintAdminLoans(hdc, rc); break;
         case SCR_ADMIN_CASH: PaintAdminCash(hdc, rc); break;
         case SCR_ADMIN_DAILY: PaintAdminDaily(hdc, rc); break;
-        case SCR_ATM_LOGIN: PaintLoginScreen(hdc, rc); break;
+        case SCR_ATM_LOGIN: PaintATMLoginScreen(hdc, rc); break;
         case SCR_ATM_MENU: PaintATMMenu(hdc, rc); break;
         case SCR_ATM_BALANCE: PaintATMBalance(hdc, rc); break;
         case SCR_ATM_DEPOSIT: PaintATMDeposit(hdc, rc); break;
@@ -1256,6 +1366,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
         case SCR_ATM_MINISTATE: PaintATMMiniState(hdc, rc); break;
         case SCR_ATM_CHANGEPIN: PaintATMChangePIN(hdc, rc); break;
         case SCR_ATM_INFO: PaintATMInfo(hdc, rc); break;
+        case SCR_OTP: PaintOTPScreen(hdc, rc); break;
     }
 
     if (!g.statusMsg.empty()) {
@@ -1288,17 +1399,36 @@ static void CreateScreenControls() {
     int gap = 48;
 
     switch (g.screen) {
-    case SCR_LOGIN:
-    case SCR_ADMIN_LOGIN:
+    case SCR_LOGIN: {
+        int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+        int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+        MakeBtn(BTN_DO_ADMIN_LOGIN, "Bank Administrator", cx - 180, cy - 20, 170, 42, RGB(30,50,100));
+        MakeBtn(BTN_DO_LOGIN, "ATM Customer", cx + 10, cy - 20, 170, 42, RGB(46,160,67));
+        break;
+    }
     case SCR_ATM_LOGIN: {
         int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
         int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
-        MakeBtn(BTN_DO_ADMIN_LOGIN, "Bank Administrator", cx - 180, cy - 20, 170, 42, 0x001E32A0);
-        MakeBtn(BTN_DO_LOGIN, "ATM Customer", cx + 10, cy - 20, 170, 42, 0x0043A047);
+        MakeLabel("Account Number:", sx + 5, sy + 5, 150, 22, 1);
+        MakeEdit(EDT_ACCNO, sx + 160, sy + 2, 200, 28);
+        MakeLabel("PIN:", sx + 5, sy + gap + 5, 150, 22, 1);
+        MakeEdit(EDT_PIN, sx + 160, sy + gap + 2, 200, 28, true);
+        MakeBtn(BTN_DO_LOGIN, "Login", sx + 30, sy + gap*2 + 15, 140, 42, RGB(46,160,67));
+        MakeBtn(BTN_BACK, "Back", sx + 190, sy + gap*2 + 15, 100, 42, RGB(128,128,128));
+        break;
+    }
+    case SCR_ADMIN_LOGIN: {
+        int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+        int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+        MakeBtn(BTN_BACK, "Back", cx - 180, cy + 80, 80, 36, RGB(128,128,128));
+        MakeLabel("Admin Password:", sx + 5, sy + 5, 200, 22, 1);
+        MakeEdit(EDT_PIN, sx + 180, sy + 2, 200, 28, true);
+        MakeBtn(BTN_DO_ADMIN_LOGIN, "Login", sx + 400, sy, 100, 38, RGB(30,50,100));
         break;
     }
     case SCR_ADMIN_DASH: {
-        MakeBtn(BTN_DO_BACKUP, "Backup Data", sx + 500, HEADER_H + 30, 140, 36, 0x001E32A0);
+        MakeBtn(BTN_DO_BACKUP, "Backup Data", sx + 500, HEADER_H + 30, 140, 36, RGB(30,50,100));
+        MakeBtn(BTN_LOGOUT, "Logout", sx + 660, HEADER_H + 30, 100, 36, RGB(220,53,69));
         break;
     }
     case SCR_ADMIN_CREATE: {
@@ -1315,33 +1445,33 @@ static void CreateScreenControls() {
         MakeEdit(EDT_PIN, sx + 170, formY + gap*4 + 2, edW, edH, true);
         MakeLabel("Confirm PIN:", sx + 5, formY + gap*5 + 5, 150, 22, 1);
         MakeEdit(EDT_CONFIRMPIN, sx + 170, formY + gap*5 + 2, edW, edH, true);
-        MakeBtn(BTN_DO_CREATE, "Create Account", sx + 30, formY + gap*6 + 15, btnW, btnH, 0x0043A047);
-        MakeBtn(BTN_CLEAR_CREATE, "Clear Form", sx + 210, formY + gap*6 + 15, btnW, btnH, 0x00808080);
+        MakeBtn(BTN_DO_CREATE, "Create Account", sx + 30, formY + gap*6 + 15, btnW, btnH, RGB(46,160,67));
+        MakeBtn(BTN_CLEAR_CREATE, "Clear Form", sx + 210, formY + gap*6 + 15, btnW, btnH, RGB(128,128,128));
         break;
     }
     case SCR_ADMIN_VIEW: break;
     case SCR_ADMIN_SEARCH: {
         MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
         MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_SEARCH, "Search", sx + 380, sy, 100, btnH, 0x001E32A0);
+        MakeBtn(BTN_DO_SEARCH, "Search", sx + 380, sy, 100, btnH, RGB(30,50,100));
         break;
     }
     case SCR_ADMIN_FREEZE: {
         MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
         MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_FREEZE, "Freeze Account", sx + 30, sy + gap + 10, btnW, btnH, 0x004527A0);
+        MakeBtn(BTN_DO_FREEZE, "Freeze Account", sx + 30, sy + gap + 10, btnW, btnH, RGB(180,50,60));
         break;
     }
     case SCR_ADMIN_UNFREEZE: {
         MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
         MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_UNFREEZE, "Unfreeze Account", sx + 30, sy + gap + 10, btnW, btnH, 0x0043A047);
+        MakeBtn(BTN_DO_UNFREEZE, "Unfreeze Account", sx + 30, sy + gap + 10, btnW, btnH, RGB(46,160,67));
         break;
     }
     case SCR_ADMIN_UNLOCK: {
         MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
         MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_UNLOCK, "Unlock Account", sx + 30, sy + gap + 10, btnW, btnH, 0x00FF8F00);
+        MakeBtn(BTN_DO_UNLOCK, "Unlock Account", sx + 30, sy + gap + 10, btnW, btnH, RGB(255,143,0));
         break;
     }
     case SCR_ADMIN_TXNS: break;
@@ -1358,7 +1488,7 @@ static void CreateScreenControls() {
         MakeEdit(EDT_SEARCH_TXN_MIN, sx + 470, sy + gap + 2, 80, edH);
         MakeLabel("Max:", sx + 5, sy + gap*2 + 5, 50, 22, 1);
         MakeEdit(EDT_SEARCH_TXN_MAX, sx + 60, sy + gap*2 + 2, 80, edH);
-        MakeBtn(BTN_DO_SEARCH_TXN, "Search", sx + 160, sy + gap*2, 100, btnH, 0x001E32A0);
+        MakeBtn(BTN_DO_SEARCH_TXN, "Search", sx + 160, sy + gap*2, 100, btnH, RGB(30,50,100));
         break;
     }
     case SCR_ADMIN_AUDIT: break;
@@ -1369,18 +1499,22 @@ static void CreateScreenControls() {
         MakeEdit(EDT_LOAN_AMT, sx + 115, sy + gap + 2, edW, edH);
         MakeLabel("Term (months):", sx + 5, sy + gap*2 + 5, 150, 22, 1);
         MakeEdit(EDT_LOAN_TERM, sx + 115, sy + gap*2 + 2, edW, edH);
-        MakeBtn(BTN_DO_LOAN, "Approve Loan", sx + 30, sy + gap*3 + 10, btnW, btnH, 0x00FF8F00);
+        MakeBtn(BTN_DO_LOAN, "Approve Loan", sx + 30, sy + gap*3 + 10, btnW, btnH, RGB(255,143,0));
         break;
     }
     case SCR_ADMIN_CASH: break;
     case SCR_ADMIN_DAILY: break;
-    case SCR_ATM_MENU: break;
+    case SCR_ATM_MENU: {
+        int btnX = rc.right - 120;
+        MakeBtn(BTN_LOGOUT, "Logout", btnX, HEADER_H + 30, 100, 36, RGB(220,53,69));
+        break;
+    }
     case SCR_ATM_BALANCE: {
         MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
         MakeEdit(EDT_ACCNO, sx + 115, sy + 2, edW, edH);
         MakeLabel("PIN:", sx + 5, sy + gap + 5, 150, 22, 1);
         MakeEdit(EDT_PIN, sx + 115, sy + gap + 2, edW, edH, true);
-        MakeBtn(BTN_DO_LOGIN, "View Balance", sx + 30, sy + gap*2 + 10, btnW, btnH, 0x001E32A0);
+        MakeBtn(BTN_DO_LOGIN, "View Balance", sx + 30, sy + gap*2 + 10, btnW, btnH, RGB(30,50,100));
         break;
     }
     case SCR_ATM_DEPOSIT: {
@@ -1388,13 +1522,13 @@ static void CreateScreenControls() {
         MakeEdit(EDT_ACCNO, sx + 115, sy + 2, edW, edH);
         MakeLabel("Amount:", sx + 5, sy + gap + 5, 150, 22, 1);
         MakeEdit(EDT_AMT, sx + 115, sy + gap + 2, edW, edH);
-        MakeBtn(BTN_DO_DEPOSIT, "Deposit", sx + 30, sy + gap*2 + 10, btnW, btnH, 0x0043A047);
+        MakeBtn(BTN_DO_DEPOSIT, "Deposit", sx + 30, sy + gap*2 + 10, btnW, btnH, RGB(46,160,67));
         break;
     }
     case SCR_ATM_WITHDRAW: {
         MakeLabel("Amount:", sx + 5, sy + 5, 150, 22, 1);
         MakeEdit(EDT_AMT, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_WITHDRAW, "Withdraw", sx + 30, sy + gap + 10, btnW, btnH, 0x00DC3545);
+        MakeBtn(BTN_DO_WITHDRAW, "Withdraw", sx + 30, sy + gap + 10, btnW, btnH, RGB(220,53,69));
         break;
     }
     case SCR_ATM_TRANSFER: {
@@ -1402,7 +1536,7 @@ static void CreateScreenControls() {
         MakeEdit(EDT_TRANSFER_TARGET, sx + 150, sy + 2, edW, edH);
         MakeLabel("Amount:", sx + 5, sy + gap + 5, 150, 22, 1);
         MakeEdit(EDT_TRANSFER_AMT, sx + 150, sy + gap + 2, edW, edH);
-        MakeBtn(BTN_DO_TRANSFER, "Transfer", sx + 30, sy + gap*2 + 10, btnW, btnH, 0x009C27B0);
+        MakeBtn(BTN_DO_TRANSFER, "Transfer", sx + 30, sy + gap*2 + 10, btnW, btnH, RGB(156,39,176));
         break;
     }
     case SCR_ATM_MINISTATE: break;
@@ -1413,10 +1547,17 @@ static void CreateScreenControls() {
         MakeEdit(EDT_NEWPIN, sx + 170, sy + gap + 2, edW, edH, true);
         MakeLabel("Confirm New PIN:", sx + 5, sy + gap*2 + 5, 150, 22, 1);
         MakeEdit(EDT_CONFIRMPIN, sx + 170, sy + gap*2 + 2, edW, edH, true);
-        MakeBtn(BTN_DO_CHANGEPIN, "Change PIN", sx + 30, sy + gap*3 + 10, btnW, btnH, 0x00FF5722);
+        MakeBtn(BTN_DO_CHANGEPIN, "Change PIN", sx + 30, sy + gap*3 + 10, btnW, btnH, RGB(255,87,34));
         break;
     }
     case SCR_ATM_INFO: break;
+    case SCR_OTP: {
+        MakeLabel("Enter OTP:", sx + 5, sy + 5, 150, 22, 1);
+        MakeEdit(EDT_OTP, sx + 150, sy + 2, 200, 28);
+        MakeBtn(BTN_DO_OTP, "Verify OTP", sx + 30, sy + 60, 140, 38, RGB(30,50,100));
+        MakeBtn(BTN_BACK, "Cancel", sx + 190, sy + 60, 120, 38, RGB(128,128,128));
+        break;
+    }
     }
 
     InvalidateRect(gHwnd, NULL, TRUE);
@@ -1443,10 +1584,32 @@ static void HandleCommand(int id) {
 
     switch (id) {
     case BTN_DO_ADMIN_LOGIN:
-        GoToScreen(SCR_ADMIN_LOGIN);
+        if (g.screen == SCR_LOGIN || g.screen == SCR_ATM_LOGIN) {
+            GoToScreen(SCR_ADMIN_LOGIN);
+        } else {
+            string pw = GetEditText(EDT_PIN);
+            if (pw == ADMIN_PASSWORD) {
+                g.isAdmin = true;
+                g.currentAccIdx = -1;
+                loadAccounts(g.accounts);
+                loadTransactions(g.transactions);
+                loadLoans(g.loans);
+                loadCashInventory(g.inventory);
+                logAudit("Admin Login", "Administrator logged in");
+                SpeakText("Welcome to the admin panel.");
+                GoToScreen(SCR_ADMIN_DASH);
+            } else {
+                SetStatus("Wrong admin password", 2);
+                SpeakText("Wrong password. Please try again.");
+            }
+        }
         break;
 
     case BTN_DO_LOGIN: {
+        if (g.screen == SCR_LOGIN) {
+            GoToScreen(SCR_ATM_LOGIN);
+            break;
+        }
         string accStr = GetEditText(EDT_ACCNO);
         string pin = GetEditText(EDT_PIN);
         if (accStr.empty() || pin.empty()) {
@@ -1489,6 +1652,7 @@ static void HandleCommand(int id) {
         g.isAdmin = false;
         logAudit("ATM Login", "Account " + to_string(accNo) + " logged in");
         loadTransactions(g.transactions);
+        SpeakText("Login successful. Welcome " + g.accounts[idx].name + ".");
         GoToScreen(SCR_ATM_MENU);
         break;
     }
@@ -1526,12 +1690,12 @@ static void HandleCommand(int id) {
 
         g.accounts.push_back(acc);
         saveAccounts(g.accounts);
-        appendAccount(acc);
 
         logAudit("Account Created", "Account " + to_string(acc.accountNo) + " created for " + name);
         stringstream ss;
         ss << "Account #" << acc.accountNo << " created successfully!";
         SetStatus(ss.str(), 1);
+        SpeakText("Account number " + to_string(acc.accountNo) + " created successfully for " + name + ".");
         ClearControls();
         break;
     }
@@ -1561,6 +1725,7 @@ static void HandleCommand(int id) {
         saveAccounts(g.accounts);
         logAudit("Account Frozen", "Account " + to_string(accNo) + " frozen");
         SetStatus("Account frozen successfully", 1);
+        SpeakText("Account " + to_string(accNo) + " has been frozen.");
         break;
     }
 
@@ -1575,6 +1740,7 @@ static void HandleCommand(int id) {
         saveAccounts(g.accounts);
         logAudit("Account Unfrozen", "Account " + to_string(accNo) + " unfrozen");
         SetStatus("Account unfrozen successfully", 1);
+        SpeakText("Account " + to_string(accNo) + " has been unfrozen.");
         break;
     }
 
@@ -1590,6 +1756,7 @@ static void HandleCommand(int id) {
         saveAccounts(g.accounts);
         logAudit("Account Unlocked", "Account " + to_string(accNo) + " unlocked, PIN reset");
         SetStatus("Account unlocked, PIN attempts reset", 1);
+        SpeakText("Account " + to_string(accNo) + " has been unlocked.");
         break;
     }
 
@@ -1616,13 +1783,13 @@ static void HandleCommand(int id) {
         txn.details = "Cash deposit";
         g.transactions.push_back(txn);
         saveTransactions(g.transactions);
-        appendTransaction(txn);
         generateReceipt(txn, g.accounts[idx]);
 
         logAudit("Deposit", "Account " + to_string(accNo) + " deposited Rs. " + to_string(amt));
         stringstream ss;
         ss << "Deposited Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);
+        SpeakText("Deposit successful. " + to_string((int)amt) + " rupees deposited.");
         ClearControls();
         break;
     }
@@ -1660,13 +1827,13 @@ static void HandleCommand(int id) {
         txn.details = "ATM cash withdrawal";
         g.transactions.push_back(txn);
         saveTransactions(g.transactions);
-        appendTransaction(txn);
         generateReceipt(txn, acc);
 
         logAudit("Withdrawal", "Account " + to_string(acc.accountNo) + " withdrew Rs. " + to_string(amt));
         stringstream ss;
         ss << "Withdrawn Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);
+        SpeakText("Please collect your cash. Withdrawal successful.");
         ClearControls();
         break;
     }
@@ -1690,10 +1857,10 @@ static void HandleCommand(int id) {
 
         if (amt >= OTP_THRESHOLD) {
             g.otpCode = generateOTP();
-            stringstream ss;
-            ss << "OTP " << g.otpCode << " generated for large transfer";
-            SetStatus(ss.str(), 0);
-            break;
+            g.pendingTransferTarget = targetAcc;
+            g.pendingTransferAmount = amt;
+            GoToScreen(SCR_OTP);
+            return;
         }
 
         g.accounts[senderIdx].balance -= amt;
@@ -1710,7 +1877,6 @@ static void HandleCommand(int id) {
         txn.details = "Transfer to " + to_string(targetAcc);
         g.transactions.push_back(txn);
         saveTransactions(g.transactions);
-        appendTransaction(txn);
         generateReceipt(txn, g.accounts[senderIdx]);
 
         logAudit("Transfer", "Account " + to_string(g.accounts[senderIdx].accountNo) +
@@ -1718,6 +1884,7 @@ static void HandleCommand(int id) {
         stringstream ss;
         ss << "Transferred Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);
+        SpeakText("Transfer successful.");
         ClearControls();
         break;
     }
@@ -1742,6 +1909,7 @@ static void HandleCommand(int id) {
         saveAccounts(g.accounts);
         logAudit("PIN Changed", "Account " + to_string(g.accounts[g.currentAccIdx].accountNo) + " PIN changed");
         SetStatus("PIN changed successfully", 1);
+        SpeakText("PIN changed successfully.");
         ClearControls();
         break;
     }
@@ -1802,7 +1970,6 @@ static void HandleCommand(int id) {
 
         g.loans.push_back(loan);
         saveLoans(g.loans);
-        appendLoan(loan);
 
         g.accounts[idx].balance += amt;
         saveAccounts(g.accounts);
@@ -1811,8 +1978,13 @@ static void HandleCommand(int id) {
         stringstream ss;
         ss << "Loan #" << loan.loanId << " approved! Rs. " << fixed << setprecision(0) << amt;
         SetStatus(ss.str(), 1);
+        SpeakText("Loan approved. " + to_string((int)amt) + " rupees credited to account.");
         break;
     }
+
+    case BTN_BACK:
+        GoToScreen(SCR_LOGIN);
+        break;
 
     case BTN_DO_BACKUP: {
         if (backupData()) {
@@ -1821,6 +1993,50 @@ static void HandleCommand(int id) {
         } else {
             SetStatus("Backup failed", 2);
         }
+        break;
+    }
+
+    case BTN_DO_OTP: {
+        string otpInput = GetEditText(EDT_OTP);
+        if (otpInput.empty()) {
+            SetStatus("Enter OTP code", 2);
+            break;
+        }
+        if (otpInput != g.otpCode) {
+            SetStatus("Wrong OTP code", 2);
+            break;
+        }
+        int senderIdx = g.currentAccIdx;
+        int targetAcc = g.pendingTransferTarget;
+        double amt = g.pendingTransferAmount;
+        int receiverIdx = findAccountIndex(targetAcc, g.accounts);
+        if (receiverIdx < 0 || senderIdx < 0) {
+            SetStatus("Transfer invalid, please try again", 2);
+            GoToScreen(SCR_ATM_MENU);
+            break;
+        }
+        g.accounts[senderIdx].balance -= amt;
+        g.accounts[receiverIdx].balance += amt;
+        saveAccounts(g.accounts);
+
+        Transaction txn;
+        txn.transactionID = generateTransactionID(g.transactions);
+        txn.accountNo = g.accounts[senderIdx].accountNo;
+        txn.type = "transfer";
+        txn.amount = amt;
+        txn.dateTime = getCurrentDateTimeStr();
+        txn.resultingBalance = g.accounts[senderIdx].balance;
+        txn.details = "Transfer to " + to_string(targetAcc);
+        g.transactions.push_back(txn);
+        saveTransactions(g.transactions);
+        generateReceipt(txn, g.accounts[senderIdx]);
+
+        logAudit("Transfer (OTP)", "Account " + to_string(g.accounts[senderIdx].accountNo) +
+                 " transferred Rs. " + to_string(amt) + " to " + to_string(targetAcc));
+        stringstream ss;
+        ss << "Transferred Rs. " << fixed << setprecision(2) << amt << " successfully";
+        SetStatus(ss.str(), 1);
+        GoToScreen(SCR_ATM_MENU);
         break;
     }
 
@@ -1836,6 +2052,8 @@ static void GoToScreen(Screen scr) {
     g.statusMsg.clear();
     CreateScreenControls();
     RefreshScreen();
+    string guide = ScreenGuide(scr);
+    if (!guide.empty()) SpeakText(guide);
 }
 
 // ============================
@@ -1954,17 +2172,15 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         HDC hdc2 = (HDC)wp;
         SetTextColor(hdc2, RGB(40,40,50));
         SetBkColor(hdc2, RGB(248,250,252));
-        static HBRUSH hBr = NULL;
-        if (hBr) DeleteObject(hBr);
-        hBr = CreateSolidBrush(RGB(248,250,252));
-        return (LRESULT)hBr;
+        static HBRUSH hEditBr = CreateSolidBrush(RGB(248,250,252));
+        return (LRESULT)hEditBr;
     }
 
     case WM_CTLCOLORSTATIC: {
         HDC hdc2 = (HDC)wp;
         SetTextColor(hdc2, RGB(40,40,50));
         SetBkMode(hdc2, TRANSPARENT);
-        return (LRESULT)GetStockObject(NULL_BRUSH);
+        return (LRESULT)GetStockObject(HOLLOW_BRUSH);
     }
 
     case WM_ERASEBKGND:

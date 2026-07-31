@@ -1,0 +1,17 @@
+=============================================
+        NATIONAL BANK - TRANSACTION RECEIPT   
+=============================================
+  Transaction ID  : TXN458181
+  Date/Time       : 2026-07-31 05:36:19
+---------------------------------------------
+  Account Number  : 1002
+  Account Holder  : Aqib Ramzan
+---------------------------------------------
+  Type            : withdrawal
+  Amount          : Rs. 30000.00
+  Resulting Bal   : Rs. 15000.00
+---------------------------------------------
+  Details         : ATM cash withdrawal
+---------------------------------------------
+  Thank you for banking with us!
+=============================================

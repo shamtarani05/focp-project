@@ -4,3 +4,44 @@
 2026-07-21 23:50:41|ATM_LOGIN_SUCCESS|Account 1001 logged in
 2026-07-21 23:51:09|WITHDRAWAL|Account 1001 withdrew Rs. 2500
 2026-07-21 23:53:05|ATM_LOGOUT|Account 1001 logged out
+2026-07-31 05:23:48|Admin Login|Administrator logged in
+2026-07-31 05:24:06|Navigation|Sidebar -> Create Account
+2026-07-31 05:25:21|Account Created|Account 1002 created for Aqib Ramzan
+2026-07-31 05:25:31|Navigation|Sidebar -> View Accounts
+2026-07-31 05:25:41|Navigation|Sidebar -> Search Account
+2026-07-31 05:25:50|Navigation|Sidebar -> Freeze Account
+2026-07-31 05:25:54|Navigation|Sidebar -> Unfreeze Acct
+2026-07-31 05:25:58|Navigation|Sidebar -> Unlock Account
+2026-07-31 05:26:03|Navigation|Sidebar -> Transactions
+2026-07-31 05:26:06|Navigation|Sidebar -> Search Txns
+2026-07-31 05:26:17|Navigation|Sidebar -> Audit Log
+2026-07-31 05:26:20|Navigation|Sidebar -> Loans
+2026-07-31 05:26:30|Loan Approved|Loan 1 of Rs. 20000.000000 for account 1002
+2026-07-31 05:26:40|Navigation|Sidebar -> View Accounts
+2026-07-31 05:26:51|Navigation|Sidebar -> Dashboard
+2026-07-31 05:26:56|Navigation|Sidebar -> View Accounts
+2026-07-31 05:27:40|Navigation|Sidebar -> Dashboard
+2026-07-31 05:35:19|ATM Login|Account 1002 logged in
+2026-07-31 05:35:30|Navigation|Sidebar -> ATM Balance
+2026-07-31 05:35:31|Navigation|Sidebar -> Deposit
+2026-07-31 05:35:32|Navigation|Sidebar -> Withdraw
+2026-07-31 05:35:33|Navigation|Sidebar -> ATM Balance
+2026-07-31 05:35:44|ATM Login|Account 1002 logged in
+2026-07-31 05:35:59|Navigation|Sidebar -> Mini Statement
+2026-07-31 05:36:02|Navigation|Sidebar -> Transfer
+2026-07-31 05:36:04|Navigation|Sidebar -> Withdraw
+2026-07-31 05:36:19|Withdrawal|Account 1002 withdrew Rs. 30000.000000
+2026-07-31 05:36:28|Navigation|Sidebar -> ATM Balance
+2026-07-31 05:36:32|Navigation|Sidebar -> Deposit
+2026-07-31 05:36:38|Deposit|Account 1002 deposited Rs. 1000000.000000
+2026-07-31 05:36:43|Navigation|Sidebar -> Withdraw
+2026-07-31 05:37:00|Navigation|Sidebar -> Transfer
+2026-07-31 05:37:50|Admin Login|Administrator logged in
+2026-07-31 05:38:01|Navigation|Sidebar -> View Accounts
+2026-07-31 05:38:10|Navigation|Sidebar -> Freeze Account
+2026-07-31 05:38:17|Account Frozen|Account 1002 frozen
+2026-07-31 05:38:23|Navigation|Sidebar -> View Accounts
+2026-07-31 05:38:37|Navigation|Sidebar -> Dashboard
+2026-07-31 05:39:04|Navigation|Sidebar -> Freeze Account
+2026-07-31 05:39:06|Navigation|Sidebar -> Unfreeze Acct
+2026-07-31 05:39:07|Navigation|Sidebar -> Dashboard

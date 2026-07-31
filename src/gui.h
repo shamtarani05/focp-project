@@ -15,7 +15,8 @@ enum Screen {
     SCR_ADMIN_LOANS, SCR_ADMIN_CASH, SCR_ADMIN_DAILY,
     SCR_ATM_LOGIN, SCR_ATM_MENU, SCR_ATM_BALANCE, SCR_ATM_DEPOSIT,
     SCR_ATM_WITHDRAW, SCR_ATM_TRANSFER, SCR_ATM_MINISTATE,
-    SCR_ATM_CHANGEPIN, SCR_ATM_INFO
+    SCR_ATM_CHANGEPIN, SCR_ATM_INFO,
+    SCR_OTP
 };
 
 struct AppState {
@@ -31,6 +32,13 @@ struct AppState {
     string statusMsg;
     int statusType;
     string otpCode;
+
+    // Pending transfer for OTP flow
+    int pendingTransferTarget;
+    double pendingTransferAmount;
+
+    // Last search results
+    int lastSearchAccNo;
 };
 
 #endif

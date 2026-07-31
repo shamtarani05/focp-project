@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <string>
-#include "core/types.h"
+#include "types.h"
 
 using namespace std;
 
