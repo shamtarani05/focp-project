@@ -140,7 +140,7 @@ static bool gdiInit = false;
 static void InitGDI() {
     if (gdiInit) return;
     gdiInit = true;
-    hFontTitle   = CreateFont(28,0,0,0,FW_BOLD,0,0,0,0,0,0,0,0,"Segoe UI");
+    hFontTitle   = CreateFont(26,0,0,0,FW_BOLD,0,0,0,0,0,0,0,0,"Segoe UI");
     hFontHeading = CreateFont(20,0,0,0,FW_BOLD,0,0,0,0,0,0,0,0,"Segoe UI");
     hFontBold    = CreateFont(16,0,0,0,FW_BOLD,0,0,0,0,0,0,0,0,"Segoe UI");
     hFontNormal  = CreateFont(15,0,0,0,0,0,0,0,0,0,0,0,0,"Segoe UI");
@@ -190,28 +190,28 @@ static void TxtCenter(HDC hdc, const char* s, int x, int y, int w, int h, HFONT 
 }
 
 static void GradientHeader(HDC hdc, RECT rc) {
-    for (int i = 0; i < HEADER_H; i++) {
-        int r = GetRValue(Primary) + (GetRValue(PrimaryLight)-GetRValue(Primary))*i/HEADER_H;
-        int g = GetGValue(Primary) + (GetGValue(PrimaryLight)-GetGValue(Primary))*i/HEADER_H;
-        int b = GetBValue(Primary) + (GetBValue(PrimaryLight)-GetBValue(Primary))*i/HEADER_H;
-        HPEN ln = CreatePen(PS_SOLID, 1, RGB(r,g,b));
-        HPEN old = (HPEN)SelectObject(hdc, ln);
-        MoveToEx(hdc, 0, i, NULL);
-        LineTo(hdc, rc.right, i);
-        SelectObject(hdc, old);
-        DeleteObject(ln);
-    }
+    HBRUSH br = CreateSolidBrush(Primary);
+    FillRect(hdc, &rc, br);
+    DeleteObject(br);
+    
+    // Bottom accent border line
+    HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(30, 41, 59));
+    HPEN old = (HPEN)SelectObject(hdc, borderPen);
+    MoveToEx(hdc, 0, rc.bottom - 1, NULL);
+    LineTo(hdc, rc.right, rc.bottom - 1);
+    SelectObject(hdc, old);
+    DeleteObject(borderPen);
 }
 
 static void DrawShadow(HDC hdc, int x, int y, int w, int h) {
-    HPEN old = (HPEN)SelectObject(hdc, hPenShadow);
+    // Subtle outer border glow
+    HPEN shadowPen = CreatePen(PS_SOLID, 1, RGB(226, 232, 240));
     HBRUSH oldBr = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
-    for (int i = 1; i <= 3; i++) {
-        RECT r = {x+i, y+i, x+w+i, y+h+i};
-        Rectangle(hdc, r.left, r.top, r.right, r.bottom);
-    }
-    SelectObject(hdc, old);
+    HPEN oldPen = (HPEN)SelectObject(hdc, shadowPen);
+    RoundRect(hdc, x-1, y-1, x+w+1, y+h+1, 14, 14);
+    SelectObject(hdc, oldPen);
     SelectObject(hdc, oldBr);
+    DeleteObject(shadowPen);
 }
 
 // --- Sidebar ---
@@ -247,53 +247,61 @@ static const SidebarItem sidebarItems[] = {
 };
 static const int NUM_SIDEBAR_ITEMS = sizeof(sidebarItems)/sizeof(sidebarItems[0]);
 
+static int gHoverSidebarIdx = -1;
+
 static void DrawSidebar(HDC hdc, RECT rc, AppState& s) {
     RECT sbRc = {0, HEADER_H, SIDEBAR_W, rc.bottom};
     FillRect(hdc, &sbRc, hBrushSidebar);
 
-    // Bank logo area
-    Txt(hdc, "NATIONAL BANK", 20, HEADER_H + 12, hFontBold, Accent);
-    Txt(hdc, "Banking System", 20, HEADER_H + 32, hFontSmall, RGB(120,140,170));
+    // Right subtle divider line
+    HPEN divPen = CreatePen(PS_SOLID, 1, RGB(30, 41, 59));
+    HPEN oldDiv = (HPEN)SelectObject(hdc, divPen);
+    MoveToEx(hdc, SIDEBAR_W - 1, HEADER_H, NULL);
+    LineTo(hdc, SIDEBAR_W - 1, rc.bottom);
+    SelectObject(hdc, oldDiv);
+    DeleteObject(divPen);
 
-    int yStart = HEADER_H + 65;
-    int itemH = 36;
+    // Sidebar Category Title
+    Txt(hdc, s.isAdmin ? "ADMINISTRATION" : "ATM SERVICES", 20, HEADER_H + 18, hFontSmall, RGB(100, 116, 139));
 
-    int startIdx = 0;
-    int count = 0;
-    if (s.isAdmin) {
-        startIdx = 0;
-        count = 13;
-    } else {
-        startIdx = 14;
-        count = NUM_SIDEBAR_ITEMS - 14;
-    }
+    int yStart = HEADER_H + 42;
+    int itemH = 38;
+
+    int startIdx = s.isAdmin ? 0 : 14;
+    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
 
     for (int i = 0; i < count; i++) {
         int idx = startIdx + i;
         int y = yStart + i * itemH;
         bool selected = (s.screen == sidebarItems[idx].screen);
+        bool hovered = (idx == gHoverSidebarIdx);
 
+        RECT itemRc = {12, y, SIDEBAR_W - 12, y + itemH - 4};
         if (selected) {
-            RECT selRc = {0, y, SIDEBAR_W, y + itemH};
-            FillRect(hdc, &selRc, hBrushSidebar);
-
-            HPEN accentPen = CreatePen(PS_SOLID, 3, Accent);
-            HPEN old = (HPEN)SelectObject(hdc, accentPen);
-            MoveToEx(hdc, 0, y+4, NULL);
-            LineTo(hdc, 0, y+itemH-4);
-            SelectObject(hdc, old);
-            DeleteObject(accentPen);
-        }
-
-        RECT itemRc = {8, y+2, SIDEBAR_W-8, y+itemH-2};
-        if (selected) {
-            HBRUSH selBg = CreateSolidBrush(RGB(30,50,100));
-            FillRect(hdc, &itemRc, selBg);
+            HBRUSH selBg = CreateSolidBrush(RGB(30, 41, 59));
+            HPEN selPen = CreatePen(PS_SOLID, 1, RGB(51, 65, 85));
+            RoundRect2(hdc, itemRc.left, itemRc.top, itemRc.right - itemRc.left, itemRc.bottom - itemRc.top, 12, selBg, selPen);
             DeleteObject(selBg);
+            DeleteObject(selPen);
+
+            // Active pill bar
+            HBRUSH pillBr = CreateSolidBrush(Secondary);
+            HPEN oldP = (HPEN)SelectObject(hdc, GetStockObject(NULL_PEN));
+            HBRUSH oldB = (HBRUSH)SelectObject(hdc, pillBr);
+            RoundRect(hdc, 12, y + 4, 16, y + itemH - 8, 4, 4);
+            SelectObject(hdc, oldP);
+            SelectObject(hdc, oldB);
+            DeleteObject(pillBr);
+        } else if (hovered) {
+            HBRUSH hovBg = CreateSolidBrush(RGB(24, 34, 53));
+            HPEN hovPen = CreatePen(PS_SOLID, 1, RGB(40, 53, 72));
+            RoundRect2(hdc, itemRc.left, itemRc.top, itemRc.right - itemRc.left, itemRc.bottom - itemRc.top, 12, hovBg, hovPen);
+            DeleteObject(hovBg);
+            DeleteObject(hovPen);
         }
 
-        Txt(hdc, sidebarItems[idx].label, 24, y + 9, hFontNormal,
-            selected ? RGB(255,255,255) : RGB(160,175,200));
+        Txt(hdc, sidebarItems[idx].label, 26, y + 8, (selected || hovered) ? hFontBold : hFontNormal,
+            selected ? RGB(255,255,255) : (hovered ? RGB(226,232,240) : RGB(148,163,184)));
     }
 }
 
@@ -302,8 +310,8 @@ static int SidebarHitTest(LPARAM lp, AppState& s) {
     int my = HIWORD(lp);
     if (mx >= SIDEBAR_W || my <= HEADER_H) return -1;
 
-    int yStart = HEADER_H + 65;
-    int itemH = 36;
+    int yStart = HEADER_H + 42;
+    int itemH = 38;
 
     int startIdx = s.isAdmin ? 0 : 14;
     int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
@@ -321,17 +329,61 @@ static void DrawHeader(HDC hdc, RECT rc, AppState& s) {
     RECT hdrRc = {0, 0, rc.right, HEADER_H};
     GradientHeader(hdc, hdrRc);
 
-    Txt(hdc, "National Bank", SIDEBAR_W + 20, 16, hFontTitle, RGB(255,255,255));
+    // Bank Icon badge
+    HBRUSH iconBr = CreateSolidBrush(Accent);
+    HPEN oldP = (HPEN)SelectObject(hdc, GetStockObject(NULL_PEN));
+    HBRUSH oldB = (HBRUSH)SelectObject(hdc, iconBr);
+    RoundRect(hdc, 20, 14, 55, 49, 10, 10);
+    SelectObject(hdc, oldP);
+    SelectObject(hdc, oldB);
+    DeleteObject(iconBr);
 
-    const char* user = s.isAdmin ? "Admin Panel" : "ATM Portal";
-    Txt(hdc, user, rc.right - 150, 20, hFontNormal, RGB(180,200,230));
+    TxtCenter(hdc, "NB", 20, 14, 35, 35, hFontBold, RGB(255,255,255));
+
+    Txt(hdc, "NATIONAL BANK", 68, 14, hFontHeading, RGB(255,255,255));
+    Txt(hdc, "Secure Banking Platform", 68, 38, hFontSmall, RGB(148,163,184));
+
+    // Show current user/mode label (left-aligned after bank name)
+    const char* modeLabel = s.isAdmin ? "Admin Portal" :
+                            (s.currentAccIdx >= 0 ? "ATM Session" : "");
+    if (modeLabel[0] != '\0') {
+        HBRUSH modeBg = CreateSolidBrush(RGB(30,41,59));
+        HPEN modePen = CreatePen(PS_SOLID, 1, RGB(51,65,85));
+        RoundRect2(hdc, 280, 20, 120, 26, 8, modeBg, modePen);
+        DeleteObject(modeBg);
+        DeleteObject(modePen);
+        TxtCenter(hdc, modeLabel, 280, 20, 120, 26, hFontSmall, RGB(148,163,184));
+    }
 }
 
-static void DrawStatus(HDC hdc, RECT rc) {
+static void DrawStatus(HDC hdc, RECT rc, AppState& s) {
     RECT stRc = {0, rc.bottom - STATUS_H, rc.right, rc.bottom};
     FillRect(hdc, &stRc, hBrushPrimary);
-    Txt(hdc, "National Bank v2.0  |  FOCP Group Project  |  All Rights Reserved",
-        10, rc.bottom - STATUS_H + 7, hFontSmall, RGB(140,160,190));
+
+    HPEN linePen = CreatePen(PS_SOLID, 1, RGB(30, 41, 59));
+    HPEN old = (HPEN)SelectObject(hdc, linePen);
+    MoveToEx(hdc, 0, stRc.top, NULL);
+    LineTo(hdc, rc.right, stRc.top);
+    SelectObject(hdc, old);
+    DeleteObject(linePen);
+
+    // Status Message if present
+    if (!s.statusMsg.empty()) {
+        COLORREF dotClr = (s.statusType == 1) ? Success : (s.statusType == 2 ? Error : Secondary);
+        HBRUSH dotBr = CreateSolidBrush(dotClr);
+        HPEN oldP = (HPEN)SelectObject(hdc, GetStockObject(NULL_PEN));
+        HBRUSH oldB = (HBRUSH)SelectObject(hdc, dotBr);
+        Ellipse(hdc, 15, stRc.top + 12, 23, stRc.top + 20);
+        SelectObject(hdc, oldP);
+        SelectObject(hdc, oldB);
+        DeleteObject(dotBr);
+
+        Txt(hdc, s.statusMsg.c_str(), 30, stRc.top + 7, hFontBold, dotClr);
+    } else {
+        Txt(hdc, "National Bank  |  Ready", 15, stRc.top + 7, hFontSmall, RGB(148,163,184));
+    }
+
+    Txt(hdc, "System v2.5", rc.right - 100, stRc.top + 7, hFontSmall, RGB(148,163,184));
 }
 
 // --- Card / Panel helpers ---
@@ -371,20 +423,50 @@ static void ClearControls() {
     g.childControls.clear();
 }
 
+static WNDPROC gOldBtnProc = NULL;
+
+static LRESULT CALLBACK BtnSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    switch (msg) {
+    case WM_MOUSEMOVE: {
+        if (!GetProp(hwnd, "HOVER")) {
+            SetProp(hwnd, "HOVER", (HANDLE)1);
+            TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, hwnd, 0 };
+            TrackMouseEvent(&tme);
+            InvalidateRect(hwnd, NULL, FALSE);
+        }
+        break;
+    }
+    case WM_MOUSELEAVE: {
+        RemoveProp(hwnd, "HOVER");
+        InvalidateRect(hwnd, NULL, FALSE);
+        break;
+    }
+    case WM_SETCURSOR: {
+        SetCursor(LoadCursor(NULL, IDC_HAND));
+        return TRUE;
+    }
+    }
+    return CallWindowProc(gOldBtnProc, hwnd, msg, wp, lp);
+}
+
 static HWND MakeBtn(int id, const char* text, int x, int y, int w, int h, int color) {
     HWND hw = CreateWindow("BUTTON", text,
         WS_CHILD|WS_VISIBLE|BS_OWNERDRAW,
         x, y, w, h, gHwnd, (HMENU)(LONG_PTR)id, NULL, NULL);
     SetWindowLongPtr(hw, GWL_USERDATA, color);
+    if (!gOldBtnProc) {
+        gOldBtnProc = (WNDPROC)GetWindowLongPtr(hw, GWLP_WNDPROC);
+    }
+    SetWindowLongPtr(hw, GWLP_WNDPROC, (LONG_PTR)BtnSubclassProc);
     ButtonInfo bi = {id, hw, color};
     gButtons.push_back(bi);
     return hw;
 }
 
 static HWND MakeEdit(int id, int x, int y, int w, int h, bool pwd = false) {
-    DWORD style = WS_CHILD|WS_VISIBLE|WS_BORDER|ES_AUTOHSCROLL;
+    DWORD style = WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL;
     if (pwd) style |= ES_PASSWORD;
-    HWND hw = CreateWindow("EDIT", "",
+    HWND hw = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "",
         style, x, y, w, h, gHwnd, (HMENU)(LONG_PTR)id, NULL, NULL);
     SendMessage(hw, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
     EditInfo ei = {id, hw};
@@ -432,51 +514,51 @@ static void RefreshScreen() {
 // ============================
 
 static void PaintLoginScreen(HDC hdc, RECT rc) {
-    int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+    int cx = rc.right / 2;
     int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
 
-    DrawCard(hdc, cx - 200, cy - 160, 400, 320);
-    TxtCenter(hdc, "National Bank", cx - 200, cy - 140, 400, 40, hFontTitle, Primary);
-    TxtCenter(hdc, "Welcome to our Banking System", cx - 200, cy - 95, 400, 25, hFontSmall, TextLight);
+    DrawCard(hdc, cx - 220, cy - 140, 440, 280);
+    TxtCenter(hdc, "NATIONAL BANK", cx - 220, cy - 115, 440, 32, hFontTitle, Primary);
+    TxtCenter(hdc, "Welcome to the Digital Banking Platform", cx - 220, cy - 80, 440, 20, hFontSmall, TextLight);
 
     HPEN linePen = CreatePen(PS_SOLID, 1, CardBorder);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, cx - 160, cy - 65, NULL);
-    LineTo(hdc, cx + 160, cy - 65);
+    MoveToEx(hdc, cx - 170, cy - 50, NULL);
+    LineTo(hdc, cx + 170, cy - 50);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    TxtCenter(hdc, "Select your portal:", cx - 200, cy - 55, 400, 25, hFontBold, Text);
+    TxtCenter(hdc, "Select your portal to log in:", cx - 220, cy - 35, 440, 22, hFontBold, Text);
 }
 
 static void PaintATMLoginScreen(HDC hdc, RECT rc) {
-    int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+    int cx = rc.right / 2;
     int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
 
-    DrawCard(hdc, cx - 200, cy - 130, 400, 260);
-    TxtCenter(hdc, "ATM Customer Login", cx - 200, cy - 110, 400, 40, hFontTitle, Primary);
-    TxtCenter(hdc, "Enter your account number and PIN", cx - 200, cy - 65, 400, 25, hFontSmall, TextLight);
+    DrawCard(hdc, cx - 220, cy - 140, 440, 280);
+    TxtCenter(hdc, "ATM Customer Login", cx - 220, cy - 115, 440, 32, hFontTitle, Primary);
+    TxtCenter(hdc, "Enter your account number and PIN to access ATM services", cx - 220, cy - 80, 440, 20, hFontSmall, TextLight);
 
     HPEN linePen = CreatePen(PS_SOLID, 1, CardBorder);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, cx - 160, cy - 40, NULL);
-    LineTo(hdc, cx + 160, cy - 40);
+    MoveToEx(hdc, cx - 170, cy - 50, NULL);
+    LineTo(hdc, cx + 170, cy - 50);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 }
 
 static void PaintAdminLoginScreen(HDC hdc, RECT rc) {
-    int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+    int cx = rc.right / 2;
     int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
 
-    DrawCard(hdc, cx - 200, cy - 130, 400, 260);
-    TxtCenter(hdc, "Admin Login", cx - 200, cy - 110, 400, 40, hFontTitle, Primary);
-    TxtCenter(hdc, "Enter administrator password", cx - 200, cy - 65, 400, 25, hFontSmall, TextLight);
+    DrawCard(hdc, cx - 220, cy - 140, 440, 280);
+    TxtCenter(hdc, "Administrator Login", cx - 220, cy - 115, 440, 32, hFontTitle, Primary);
+    TxtCenter(hdc, "Enter administrator password to access management system", cx - 220, cy - 80, 440, 20, hFontSmall, TextLight);
 
     HPEN linePen = CreatePen(PS_SOLID, 1, CardBorder);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, cx - 160, cy - 40, NULL);
-    LineTo(hdc, cx + 160, cy - 40);
+    MoveToEx(hdc, cx - 170, cy - 50, NULL);
+    LineTo(hdc, cx + 170, cy - 50);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 }
@@ -594,28 +676,21 @@ static void PaintAdminDash(HDC hdc, RECT rc) {
 
 static void PaintCreateAccount(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(500, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = min(560, (int)(rc.right - SIDEBAR_W - 60));
 
     Txt(hdc, "Create New Account", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Fill in the form below to register a new bank account", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 250, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 260, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    int formY = sy + 50;
-    int lblX = sx + 15;
-    int edtX = sx + 170;
-    int edtW = cw - 200;
-
-    DrawCard(hdc, sx - 10, formY - 10, cw + 20, 400);
-
-    const char* labels[] = {"Full Name:", "CNIC:", "Account Type:", "Initial Balance:", "PIN:", "Confirm PIN:"};
-    for (int i = 0; i < 6; i++) {
-        Txt(hdc, labels[i], lblX, formY + 10 + i * 48, hFontBold, Text);
-    }
+    int cardY = sy + 58;
+    int cardH = 6 * 52 + 70;
+    DrawCard(hdc, sx, cardY, cw, cardH);
 }
 
 static void PaintViewAccounts(HDC hdc, RECT rc) {
@@ -686,21 +761,50 @@ static void PaintViewAccounts(HDC hdc, RECT rc) {
 
 static void PaintSearchAccount(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = min(560, (int)(rc.right - SIDEBAR_W - 60));
 
     Txt(hdc, "Search Account", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Look up any account by its number", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 180, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 190, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
+    // Search input card
+    DrawCard(hdc, sx, sy + 58, cw, 80);
 
-    DrawCard(hdc, sx - 10, sy + 130, cw + 20, 300);
+    // Results card
+    int resultY = sy + 155;
+    int resultH = rc.bottom - HEADER_H - STATUS_H - resultY + HEADER_H - 15;
+    DrawCard(hdc, sx, resultY, cw, max(resultH, 180));
+    int idx = -1;
+    if (g.lastSearchAccNo > 0) {
+        idx = findAccountIndex(g.lastSearchAccNo, g.accounts);
+    }
+    if (idx < 0) {
+        TxtCenter(hdc, "Enter an account number above and click Search", sx, resultY, cw, 180, hFontSmall, TextLight);
+    } else {
+        auto& a = g.accounts[idx];
+        int y = resultY + 25;
+        int lx = sx + 30, vx = sx + 200;
+        Txt(hdc, "Account Number:",  lx, y,      hFontSmall, TextLight);
+        Txt(hdc, to_string(a.accountNo).c_str(), vx, y, hFontBold, Text);
+        Txt(hdc, "Name:",             lx, y+32,   hFontSmall, TextLight);
+        Txt(hdc, a.name.c_str(),       vx, y+32,   hFontBold, Text);
+        Txt(hdc, "CNIC:",             lx, y+64,   hFontSmall, TextLight);
+        Txt(hdc, a.cnic.c_str(),       vx, y+64,   hFontNormal, TextLight);
+        Txt(hdc, "Account Type:",     lx, y+96,   hFontSmall, TextLight);
+        Txt(hdc, a.accountType.c_str(), vx, y+96,  hFontNormal, Text);
+        Txt(hdc, "Balance:",          lx, y+128,  hFontSmall, TextLight);
+        stringstream ss; ss << "Rs. " << fixed << setprecision(2) << a.balance;
+        Txt(hdc, ss.str().c_str(),    vx, y+126,  hFontHeading, Success);
+        Txt(hdc, "Status:",           lx, y+165,  hFontSmall, TextLight);
+        COLORREF sc = (a.status=="active") ? Success : (a.status=="frozen" ? Warning : Error);
+        Txt(hdc, a.status.c_str(),    vx, y+163,  hFontBold, sc);
+    }
 }
 
 static void PaintATMMenu(HDC hdc, RECT rc) {
@@ -755,9 +859,9 @@ static void PaintATMMenu(HDC hdc, RECT rc) {
 }
 
 static void PaintATMBalance(HDC hdc, RECT rc) {
-    int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
+    int sx = SIDEBAR_W + 35;
+    int sy = HEADER_H + 25;
+    int cw = min(500, (int)(rc.right - SIDEBAR_W - 70));
 
     Txt(hdc, "Account Balance", sx, sy, hFontHeading, Primary);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
@@ -767,95 +871,90 @@ static void PaintATMBalance(HDC hdc, RECT rc) {
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
-
-    DrawCard(hdc, sx - 10, sy + 130, cw + 20, 180);
+    DrawCard(hdc, sx, sy + 45, cw, 220);
     if (g.currentAccIdx >= 0 && g.currentAccIdx < (int)g.accounts.size()) {
         auto& a = g.accounts[g.currentAccIdx];
-        Txt(hdc, "Account Holder:", sx + 10, sy + 150, hFontSmall, TextLight);
-        Txt(hdc, a.name.c_str(), sx + 150, sy + 148, hFontBold, Text);
+        Txt(hdc, "Account Holder:", sx + 25, sy + 70, hFontSmall, TextLight);
+        Txt(hdc, a.name.c_str(), sx + 160, sy + 68, hFontBold, Text);
 
-        Txt(hdc, "Account Type:", sx + 10, sy + 180, hFontSmall, TextLight);
-        Txt(hdc, a.accountType.c_str(), sx + 150, sy + 178, hFontNormal, Text);
+        Txt(hdc, "Account Type:", sx + 25, sy + 105, hFontSmall, TextLight);
+        Txt(hdc, a.accountType.c_str(), sx + 160, sy + 103, hFontNormal, Text);
 
-        Txt(hdc, "Status:", sx + 10, sy + 210, hFontSmall, TextLight);
+        Txt(hdc, "Account Status:", sx + 25, sy + 140, hFontSmall, TextLight);
         COLORREF stClr = (a.status=="active") ? Success : Error;
-        Txt(hdc, a.status.c_str(), sx + 150, sy + 208, hFontBold, stClr);
+        Txt(hdc, a.status.c_str(), sx + 160, sy + 138, hFontBold, stClr);
 
-        Txt(hdc, "Available Balance:", sx + 10, sy + 250, hFontBold, Text);
+        Txt(hdc, "Available Balance:", sx + 25, sy + 185, hFontBold, Text);
         stringstream ss;
         ss << "Rs. " << fixed << setprecision(2) << a.balance;
-        Txt(hdc, ss.str().c_str(), sx + 170, sy + 246, hFontTitle, Primary);
+        Txt(hdc, ss.str().c_str(), sx + 180, sy + 180, hFontTitle, Success);
     }
 }
 
 static void PaintATMWithdraw(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = min(520, (int)(rc.right - SIDEBAR_W - 60));
 
     Txt(hdc, "Withdraw Cash", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Enter the amount you wish to withdraw", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 180, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 175, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
-
-    DrawCard(hdc, sx - 10, sy + 130, cw + 20, 140);
-    Txt(hdc, "Amount:", sx + 5, sy + 150, hFontBold, Text);
+    int cardY = sy + 58;
+    DrawCard(hdc, sx, cardY, cw, 145);
+    Txt(hdc, "Amount (Rs.):", sx + 25, cardY + 28, hFontBold, Text);
 
     if (g.currentAccIdx >= 0 && g.currentAccIdx < (int)g.accounts.size()) {
         stringstream ss;
         ss << "Daily Limit: Rs. " << fixed << setprecision(0) << DAILY_WITHDRAWAL_LIMIT
-           << "  |  Withdrawn: Rs. " << g.accounts[g.currentAccIdx].dailyWithdrawn;
-        Txt(hdc, ss.str().c_str(), sx, sy + 190, hFontSmall, TextLight);
+           << "   |   Withdrawn Today: Rs. " << fixed << setprecision(0) << g.accounts[g.currentAccIdx].dailyWithdrawn;
+        Txt(hdc, ss.str().c_str(), sx + 25, cardY + 155, hFontSmall, TextLight);
     }
 }
 
 static void PaintATMDeposit(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = min(520, (int)(rc.right - SIDEBAR_W - 60));
 
     Txt(hdc, "Deposit Cash", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Add funds to your account", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 150, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 145, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
-
-    DrawCard(hdc, sx - 10, sy + 130, cw + 20, 100);
-    Txt(hdc, "Amount:", sx + 5, sy + 150, hFontBold, Text);
+    int cardY = sy + 58;
+    DrawCard(hdc, sx, cardY, cw, 145);
+    Txt(hdc, "Amount (Rs.):", sx + 25, cardY + 28, hFontBold, Text);
+    Txt(hdc, "Enter the amount in Pakistani Rupees", sx + 25, cardY + 155, hFontSmall, TextLight);
 }
 
 static void PaintATMTransfer(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = min(520, (int)(rc.right - SIDEBAR_W - 60));
 
     Txt(hdc, "Transfer Funds", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Send money to another account", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 180, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 180, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "From Account:", sx + 5, sy + 65, hFontBold, Text);
-
-    DrawCard(hdc, sx - 10, sy + 130, cw + 20, 200);
-    Txt(hdc, "To Account #:", sx + 5, sy + 150, hFontBold, Text);
-    Txt(hdc, "Amount:", sx + 5, sy + 198, hFontBold, Text);
+    int cardY = sy + 58;
+    DrawCard(hdc, sx, cardY, cw, 195);
+    Txt(hdc, "Target Account #:", sx + 25, cardY + 28, hFontBold, Text);
+    Txt(hdc, "Amount (Rs.):",     sx + 25, cardY + 78, hFontBold, Text);
 }
 
 static void PaintATMMiniState(HDC hdc, RECT rc) {
@@ -925,21 +1024,24 @@ static void PaintATMMiniState(HDC hdc, RECT rc) {
 
 static void PaintATMChangePIN(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = min(520, (int)(rc.right - SIDEBAR_W - 60));
 
     Txt(hdc, "Change PIN", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Update your 4-digit security PIN", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 130, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 130, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 240);
-    Txt(hdc, "Current PIN:", sx + 5, sy + 65, hFontBold, Text);
-    Txt(hdc, "New PIN:", sx + 5, sy + 113, hFontBold, Text);
-    Txt(hdc, "Confirm New PIN:", sx + 5, sy + 161, hFontBold, Text);
+    int cardY = sy + 58;
+    DrawCard(hdc, sx, cardY, cw, 245);
+    Txt(hdc, "Current PIN:",     sx + 25, cardY + 28, hFontBold, Text);
+    Txt(hdc, "New PIN:",         sx + 25, cardY + 78, hFontBold, Text);
+    Txt(hdc, "Confirm New PIN:", sx + 25, cardY + 128, hFontBold, Text);
+    Txt(hdc, "All PINs must be exactly 4 digits", sx + 25, cardY + 255, hFontSmall, TextLight);
 }
 
 static void PaintATMInfo(HDC hdc, RECT rc) {
@@ -971,58 +1073,57 @@ static void PaintATMInfo(HDC hdc, RECT rc) {
     }
 }
 
-static void PaintAdminFreeze(HDC hdc, RECT rc) {
+static void PaintAdminActionScreen(HDC hdc, RECT rc,
+    const char* title, const char* subtitle, const char* note, COLORREF noteClr) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = min(520, (int)(rc.right - SIDEBAR_W - 60));
 
-    Txt(hdc, "Freeze Account", sx, sy, hFontHeading, Primary);
+    Txt(hdc, title, sx, sy, hFontHeading, Primary);
+    Txt(hdc, subtitle, sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 170, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + (int)(strlen(title) * 10.5f), sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
-    Txt(hdc, "Freezing an account disables all ATM transactions.", sx, sy + 130, hFontSmall, Error);
+    int cardY = sy + 58;
+    DrawCard(hdc, sx, cardY, cw, 145);
+
+    Txt(hdc, "Account Number:", sx + 25, cardY + 28, hFontBold, Text);
+
+    // Warning/info note below card
+    HBRUSH noteBg = CreateSolidBrush(RGB(254,252,232));
+    HPEN notePen = CreatePen(PS_SOLID, 1, RGB(253,230,138));
+    RoundRect2(hdc, sx, cardY + 160, cw, 44, 8, noteBg, notePen);
+    DeleteObject(noteBg);
+    DeleteObject(notePen);
+    Txt(hdc, note, sx + 15, cardY + 172, hFontSmall, noteClr);
+}
+
+static void PaintAdminFreeze(HDC hdc, RECT rc) {
+    PaintAdminActionScreen(hdc, rc,
+        "Freeze Account",
+        "Disable all ATM transactions for an account",
+        "Warning: Freezing blocks all deposits, withdrawals and transfers.",
+        RGB(180, 83, 9));
 }
 
 static void PaintAdminUnfreeze(HDC hdc, RECT rc) {
-    int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
-
-    Txt(hdc, "Unfreeze Account", sx, sy, hFontHeading, Primary);
-    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
-    HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 200, sy + 28);
-    SelectObject(hdc, old);
-    DeleteObject(linePen);
-
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
-    Txt(hdc, "Reactivate a frozen account for full access.", sx, sy + 130, hFontSmall, Success);
+    PaintAdminActionScreen(hdc, rc,
+        "Unfreeze Account",
+        "Restore access to a previously frozen account",
+        "This will reactivate the account and allow all ATM transactions.",
+        RGB(5, 122, 85));
 }
 
 static void PaintAdminUnlock(HDC hdc, RECT rc) {
-    int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(450, (int)(rc.right - SIDEBAR_W - 60));
-
-    Txt(hdc, "Unlock Account", sx, sy, hFontHeading, Primary);
-    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
-    HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 180, sy + 28);
-    SelectObject(hdc, old);
-    DeleteObject(linePen);
-
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 70);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
-    Txt(hdc, "Reset PIN attempts and restore locked accounts.", sx, sy + 130, hFontSmall, Secondary);
+    PaintAdminActionScreen(hdc, rc,
+        "Unlock Account",
+        "Reset PIN attempt counter and restore locked accounts",
+        "This resets failed PIN attempts to 0, allowing the customer to log in again.",
+        RGB(30, 64, 175));
 }
 
 static void PaintAdminTxns(HDC hdc, RECT rc) {
@@ -1082,26 +1183,34 @@ static void PaintAdminTxns(HDC hdc, RECT rc) {
 
 static void PaintAdminSearchTxn(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(550, (int)(rc.right - SIDEBAR_W - 60));
+    int sy = HEADER_H + 25;
+    int cw = rc.right - SIDEBAR_W - 60;
+    int ch = rc.bottom - HEADER_H - STATUS_H - 50;
 
     Txt(hdc, "Search Transactions", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Filter the transaction log by account, type, date or amount", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 220, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 240, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 200);
-    Txt(hdc, "Account #:", sx + 5, sy + 65, hFontBold, Text);
-    Txt(hdc, "Type:", sx + 250, sy + 65, hFontBold, Text);
-    Txt(hdc, "From Date:", sx + 5, sy + 113, hFontBold, Text);
-    Txt(hdc, "To Date:", sx + 250, sy + 113, hFontBold, Text);
-    Txt(hdc, "Min Amount:", sx + 5, sy + 161, hFontBold, Text);
-    Txt(hdc, "Max Amount:", sx + 250, sy + 161, hFontBold, Text);
+    // Filter card
+    DrawCard(hdc, sx, sy + 58, cw, 160);
+    int fY = sy + 58;
+    int col1X = sx + 20, col2X = sx + cw/2 + 10;
+    int col1V = sx + 130, col2V = sx + cw/2 + 120;
+    Txt(hdc, "Account #:",  col1X, fY + 25, hFontBold, TextLight);
+    Txt(hdc, "Type:",       col2X, fY + 25, hFontBold, TextLight);
+    Txt(hdc, "From Date:",  col1X, fY + 75, hFontBold, TextLight);
+    Txt(hdc, "To Date:",    col2X, fY + 75, hFontBold, TextLight);
+    Txt(hdc, "Min Amount:", col1X, fY + 125, hFontBold, TextLight);
+    Txt(hdc, "Max Amount:", col2X, fY + 125, hFontBold, TextLight);
 
-    DrawCard(hdc, sx - 10, sy + 260, cw + 20, 300);
+    // Results card
+    int resY = sy + 235;
+    DrawCard(hdc, sx, resY, cw, ch - resY + HEADER_H + 15);
 }
 
 static void PaintAdminAudit(HDC hdc, RECT rc) {
@@ -1150,38 +1259,49 @@ static void PaintAdminAudit(HDC hdc, RECT rc) {
 }
 
 static void PaintAdminLoans(HDC hdc, RECT rc) {
-    int sx = SIDEBAR_W + 25;
+    int sx = SIDEBAR_W + 30;
     int sy = HEADER_H + 25;
-    int cw = rc.right - SIDEBAR_W - 50;
+    int cw = rc.right - SIDEBAR_W - 60;
     int ch = rc.bottom - HEADER_H - STATUS_H - 50;
 
     Txt(hdc, "Loan Management", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Approve new loans and review existing loan records", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 200, sy + 28);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 200, sy + 46);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 40, cw + 20, 90);
-    Txt(hdc, "Account #:", sx + 5, sy + 60, hFontBold, Text);
-    Txt(hdc, "Amount:", sx + 5, sy + 90, hFontBold, Text);
+    // Approve loan form card
+    DrawCard(hdc, sx, sy + 58, cw, 175);
+    int fY = sy + 58;
+    Txt(hdc, "Approve New Loan", sx + 20, fY + 15, hFontBold, Text);
+    Txt(hdc, "Account #:",    sx + 20, fY + 52, hFontSmall, TextLight);
+    Txt(hdc, "Loan Amount:",  sx + 20, fY + 102, hFontSmall, TextLight);
+    Txt(hdc, "Term (months):",sx + 20, fY + 152, hFontSmall, TextLight);
 
-    DrawCard(hdc, sx, sy + 145, cw, ch - 160);
+    // Results card
+    int resY = sy + 250;
+    int cardH2 = ch - resY + HEADER_H + 15;
+    DrawCard(hdc, sx, resY, cw, max(cardH2, 80));
 
-    RECT tblHdr = {sx + 10, sy + 150, sx + cw - 10, sy + 178};
+
+    // Loans table inside results card
+    int tblHdrY = resY + 5;
+    RECT tblHdr = {sx + 10, tblHdrY, sx + cw - 10, tblHdrY + 28};
     HBRUSH tblHdrBr = CreateSolidBrush(RGB(240,243,248));
     FillRect(hdc, &tblHdr, tblHdrBr);
     DeleteObject(tblHdrBr);
 
-    int colX[] = {sx+15, sx+80, sx+180, sx+300, sx+420, sx+540};
+    int colX[] = {sx+15, sx+80, sx+200, sx+330, sx+455, sx+560};
     const char* colH[] = {"ID", "Account", "Amount", "Monthly", "Status", "Paid"};
     for (int i = 0; i < 6; i++)
-        Txt(hdc, colH[i], colX[i], sy + 157, hFontBold, TextLight);
+        Txt(hdc, colH[i], colX[i], tblHdrY + 8, hFontBold, TextLight);
 
-    int rowY = sy + 185;
+    int rowY = tblHdrY + 35;
     for (size_t i = 0; i < g.loans.size(); i++) {
-        if (rowY > sy + ch - 20) break;
+        if (rowY > resY + ch - resY + HEADER_H + 10) break;
         auto& l = g.loans[i];
         Txt(hdc, to_string(l.loanId).c_str(), colX[0], rowY, hFontMono, Text);
         Txt(hdc, to_string(l.accountNo).c_str(), colX[1], rowY, hFontNormal, Text);
@@ -1203,6 +1323,7 @@ static void PaintAdminLoans(HDC hdc, RECT rc) {
         DeleteObject(sepPen);
     }
 }
+
 
 static void PaintAdminCash(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 30;
@@ -1312,22 +1433,27 @@ static void PaintAdminDaily(HDC hdc, RECT rc) {
 }
 
 static void PaintOTPScreen(HDC hdc, RECT rc) {
-    int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 30;
-    int cw = min(400, (int)(rc.right - SIDEBAR_W - 60));
+    int cx = rc.right / 2;
+    int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+    int cw = 440, ch = 260;
+    int cardX = cx - cw/2, cardY = cy - ch/2;
 
-    Txt(hdc, "OTP Verification", sx, sy, hFontHeading, Primary);
-    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
+    DrawCard(hdc, cardX, cardY, cw, ch);
+    TxtCenter(hdc, "OTP Verification", cardX, cardY + 20, cw, 30, hFontHeading, Primary);
+    TxtCenter(hdc, "A one-time code has been generated for your transfer", cardX, cardY + 54, cw, 22, hFontSmall, TextLight);
+
+    HPEN linePen = CreatePen(PS_SOLID, 1, CardBorder);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 180, sy + 28);
+    MoveToEx(hdc, cardX + 30, cardY + 80, NULL);
+    LineTo(hdc, cardX + cw - 30, cardY + 80);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx - 10, sy + 45, cw + 20, 200);
-    Txt(hdc, "Enter OTP sent to your device:", sx + 5, sy + 65, hFontBold, Text);
-    Txt(hdc, g.otpCode.c_str(), sx + 100, sy + 100, hFontTitle, Accent);
-    Txt(hdc, "OTP:", sx + 5, sy + 145, hFontBold, Text);
+    // Show OTP prominently
+    TxtCenter(hdc, g.otpCode.c_str(), cardX, cardY + 90, cw, 50, hFontTitle, Accent);
+    TxtCenter(hdc, "Your OTP code (for testing)", cardX, cardY + 142, cw, 18, hFontSmall, TextLight);
+
+    Txt(hdc, "Enter OTP:", cardX + 30, cardY + 175, hFontBold, Text);
 }
 
 // ============================
@@ -1337,7 +1463,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
     FillRect(hdc, &rc, hBrushBg);
     DrawHeader(hdc, rc, g);
 
-    if (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN) {
+    if (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_ATM_LOGIN) {
         DrawSidebar(hdc, rc, g);
     }
 
@@ -1369,15 +1495,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
         case SCR_OTP: PaintOTPScreen(hdc, rc); break;
     }
 
-    if (!g.statusMsg.empty()) {
-        RECT stRc = {SIDEBAR_W + 10, rc.bottom - STATUS_H - 25, rc.right - 10, rc.bottom - STATUS_H - 5};
-        HBRUSH stBr = CreateSolidBrush(g.statusType == 1 ? Success : (g.statusType == 2 ? Error : Secondary));
-        RoundRect2(hdc, stRc.left, stRc.top, stRc.right - stRc.left, stRc.bottom - stRc.top, 6, stBr, (HPEN)GetStockObject(NULL_PEN));
-        DeleteObject(stBr);
-        Txt(hdc, g.statusMsg.c_str(), stRc.left + 10, stRc.top + 4, hFontNormal, RGB(255,255,255));
-    }
-
-    DrawStatus(hdc, rc);
+    DrawStatus(hdc, rc, g);
 }
 
 // ============================
@@ -1390,172 +1508,167 @@ static void CreateScreenControls() {
     ClearControls();
     RECT rc;
     GetClientRect(gHwnd, &rc);
-    int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 80;
-    int edW = 250;
-    int edH = 28;
-    int btnW = 160;
-    int btnH = 38;
-    int gap = 48;
+    int sx = SIDEBAR_W + 35;
+    int sy = HEADER_H + 25;
+    int edH = 34;
+
+    // Header buttons (Logout / Backup)
+    if (g.isAdmin && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_LOGIN) {
+        MakeBtn(BTN_DO_BACKUP, "Backup Data", rc.right - 245, 14, 115, 36, Primary);
+        MakeBtn(BTN_LOGOUT,    "Logout",      rc.right - 115, 14, 95,  36, Error);
+    } else if (!g.isAdmin && g.currentAccIdx >= 0 && g.screen != SCR_ATM_LOGIN && g.screen != SCR_LOGIN) {
+        MakeBtn(BTN_LOGOUT,    "Logout",      rc.right - 115, 14, 95,  36, Error);
+    }
 
     switch (g.screen) {
     case SCR_LOGIN: {
-        int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+        int cx = rc.right / 2;
         int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
-        MakeBtn(BTN_DO_ADMIN_LOGIN, "Bank Administrator", cx - 180, cy - 20, 170, 42, RGB(30,50,100));
-        MakeBtn(BTN_DO_LOGIN, "ATM Customer", cx + 10, cy - 20, 170, 42, RGB(46,160,67));
+        MakeBtn(BTN_DO_ADMIN_LOGIN, "Bank Administrator", cx - 170, cy + 10, 340, 46, Primary);
+        MakeBtn(BTN_DO_LOGIN,       "ATM Customer",       cx - 170, cy + 68, 340, 46, Success);
         break;
     }
     case SCR_ATM_LOGIN: {
-        int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+        int cx = rc.right / 2;
         int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
-        MakeLabel("Account Number:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_ACCNO, sx + 160, sy + 2, 200, 28);
-        MakeLabel("PIN:", sx + 5, sy + gap + 5, 150, 22, 1);
-        MakeEdit(EDT_PIN, sx + 160, sy + gap + 2, 200, 28, true);
-        MakeBtn(BTN_DO_LOGIN, "Login", sx + 30, sy + gap*2 + 15, 140, 42, RGB(46,160,67));
-        MakeBtn(BTN_BACK, "Back", sx + 190, sy + gap*2 + 15, 100, 42, RGB(128,128,128));
+        MakeLabel("Account Number:", cx - 170, cy - 25, 140, 24, 1);
+        MakeEdit(EDT_ACCNO,           cx - 20,  cy - 30, 190, 34);
+        MakeLabel("PIN:",            cx - 170, cy + 25, 140, 24, 1);
+        MakeEdit(EDT_PIN,             cx - 20,  cy + 20, 190, 34, true);
+        MakeBtn(BTN_DO_LOGIN,        "Login",  cx - 170, cy + 80, 160, 42, Success);
+        MakeBtn(BTN_BACK,            "Back",   cx + 10,  cy + 80, 160, 42, RGB(100, 116, 139));
         break;
     }
     case SCR_ADMIN_LOGIN: {
-        int cx = SIDEBAR_W + (rc.right - SIDEBAR_W) / 2;
+        int cx = rc.right / 2;
         int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
-        MakeBtn(BTN_BACK, "Back", cx - 180, cy + 80, 80, 36, RGB(128,128,128));
-        MakeLabel("Admin Password:", sx + 5, sy + 5, 200, 22, 1);
-        MakeEdit(EDT_PIN, sx + 180, sy + 2, 200, 28, true);
-        MakeBtn(BTN_DO_ADMIN_LOGIN, "Login", sx + 400, sy, 100, 38, RGB(30,50,100));
+        MakeLabel("Password:", cx - 170, cy - 10, 130, 24, 1);
+        MakeEdit(EDT_PIN,      cx - 30,  cy - 16, 200, 34, true);
+        MakeBtn(BTN_DO_ADMIN_LOGIN, "Login", cx - 170, cy + 60, 160, 42, Primary);
+        MakeBtn(BTN_BACK,           "Back",  cx + 10,  cy + 60, 160, 42, RGB(100, 116, 139));
         break;
     }
-    case SCR_ADMIN_DASH: {
-        MakeBtn(BTN_DO_BACKUP, "Backup Data", sx + 500, HEADER_H + 30, 140, 36, RGB(30,50,100));
-        MakeBtn(BTN_LOGOUT, "Logout", sx + 660, HEADER_H + 30, 100, 36, RGB(220,53,69));
-        break;
-    }
+    case SCR_ADMIN_DASH: break;
     case SCR_ADMIN_CREATE: {
-        int formY = HEADER_H + 80;
-        MakeLabel("Full Name:", sx + 5, formY + 5, 150, 22, 1);
-        MakeEdit(EDT_NAME, sx + 170, formY + 2, edW, edH);
-        MakeLabel("CNIC (XXXXX-XXXXXXX-X):", sx + 5, formY + gap + 5, 190, 22, 1);
-        MakeEdit(EDT_CNIC, sx + 200, formY + gap + 2, edW - 30, edH);
-        MakeLabel("Account Type (savings/current):", sx + 5, formY + gap*2 + 5, 220, 22, 1);
-        MakeEdit(EDT_TYPE, sx + 230, formY + gap*2 + 2, edW - 60, edH);
-        MakeLabel("Initial Balance:", sx + 5, formY + gap*3 + 5, 150, 22, 1);
-        MakeEdit(EDT_BALANCE, sx + 170, formY + gap*3 + 2, edW, edH);
-        MakeLabel("PIN (4 digits):", sx + 5, formY + gap*4 + 5, 150, 22, 1);
-        MakeEdit(EDT_PIN, sx + 170, formY + gap*4 + 2, edW, edH, true);
-        MakeLabel("Confirm PIN:", sx + 5, formY + gap*5 + 5, 150, 22, 1);
-        MakeEdit(EDT_CONFIRMPIN, sx + 170, formY + gap*5 + 2, edW, edH, true);
-        MakeBtn(BTN_DO_CREATE, "Create Account", sx + 30, formY + gap*6 + 15, btnW, btnH, RGB(46,160,67));
-        MakeBtn(BTN_CLEAR_CREATE, "Clear Form", sx + 210, formY + gap*6 + 15, btnW, btnH, RGB(128,128,128));
+        int cw = min(560, (int)(rc.right - SIDEBAR_W - 60));
+        int cardY = sy + 58;
+        int lblX = sx + 30;
+        int edtX = sx + 200;
+        int edtW = cw - 230;
+        int stepY = 52;
+
+        MakeLabel("Full Name:",     lblX, cardY + 24,           160, 24, 1);
+        MakeEdit(EDT_NAME,           edtX, cardY + 20,           edtW, edH);
+        MakeLabel("CNIC:",           lblX, cardY + 24 + stepY,   160, 24, 1);
+        MakeEdit(EDT_CNIC,           edtX, cardY + 20 + stepY,   edtW, edH);
+        MakeLabel("Account Type:",   lblX, cardY + 24 + stepY*2, 160, 24, 1);
+        MakeEdit(EDT_TYPE,           edtX, cardY + 20 + stepY*2, edtW, edH);
+        MakeLabel("Initial Balance:",lblX, cardY + 24 + stepY*3, 160, 24, 1);
+        MakeEdit(EDT_BALANCE,        edtX, cardY + 20 + stepY*3, edtW, edH);
+        MakeLabel("PIN (4 digits):", lblX, cardY + 24 + stepY*4, 160, 24, 1);
+        MakeEdit(EDT_PIN,            edtX, cardY + 20 + stepY*4, edtW, edH, true);
+        MakeLabel("Confirm PIN:",    lblX, cardY + 24 + stepY*5, 160, 24, 1);
+        MakeEdit(EDT_CONFIRMPIN,     edtX, cardY + 20 + stepY*5, edtW, edH, true);
+
+        MakeBtn(BTN_DO_CREATE,    "Create Account", edtX,       cardY + 24 + stepY*6, 160, 42, Success);
+        MakeBtn(BTN_CLEAR_CREATE, "Clear",          edtX + 175, cardY + 24 + stepY*6, 110, 42, RGB(100,116,139));
         break;
     }
     case SCR_ADMIN_VIEW: break;
     case SCR_ADMIN_SEARCH: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_SEARCH, "Search", sx + 380, sy, 100, btnH, RGB(30,50,100));
+        int cardY = sy + 58;
+        MakeLabel("Account #:", sx + 25, cardY + 24, 120, 24, 1);
+        MakeEdit(EDT_SEARCH, sx + 150, cardY + 20, 250, 36);
+        MakeBtn(BTN_DO_SEARCH, "Search", sx + 415, cardY + 19, 115, 38, Primary);
         break;
     }
     case SCR_ADMIN_FREEZE: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_FREEZE, "Freeze Account", sx + 30, sy + gap + 10, btnW, btnH, RGB(180,50,60));
+        int cardY = sy + 58;
+        MakeEdit(EDT_SEARCH, sx + 185, cardY + 22, 220, 36);
+        MakeBtn(BTN_DO_FREEZE, "Freeze Account", sx + 185, cardY + 75, 150, 40, Error);
         break;
     }
     case SCR_ADMIN_UNFREEZE: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_UNFREEZE, "Unfreeze Account", sx + 30, sy + gap + 10, btnW, btnH, RGB(46,160,67));
+        int cardY = sy + 58;
+        MakeEdit(EDT_SEARCH, sx + 185, cardY + 22, 220, 36);
+        MakeBtn(BTN_DO_UNFREEZE, "Unfreeze", sx + 185, cardY + 75, 150, 40, Success);
         break;
     }
     case SCR_ADMIN_UNLOCK: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_SEARCH, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_UNLOCK, "Unlock Account", sx + 30, sy + gap + 10, btnW, btnH, RGB(255,143,0));
+        int cardY = sy + 58;
+        MakeEdit(EDT_SEARCH, sx + 185, cardY + 22, 220, 36);
+        MakeBtn(BTN_DO_UNLOCK, "Unlock Account", sx + 185, cardY + 75, 150, 40, Warning);
         break;
     }
     case SCR_ADMIN_TXNS: break;
     case SCR_ADMIN_SEARCH_TXN: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 120, 22, 1);
-        MakeEdit(EDT_SEARCH_TXN_ACC, sx + 130, sy + 2, 120, edH);
-        MakeLabel("Type:", sx + 270, sy + 5, 60, 22, 1);
-        MakeEdit(EDT_SEARCH_TXN_TYPE, sx + 330, sy + 2, 120, edH);
-        MakeLabel("From:", sx + 5, sy + gap + 5, 80, 22, 1);
-        MakeEdit(EDT_SEARCH_TXN_FROM, sx + 90, sy + gap + 2, 120, edH);
-        MakeLabel("To:", sx + 230, sy + gap + 5, 40, 22, 1);
-        MakeEdit(EDT_SEARCH_TXN_TO, sx + 270, sy + gap + 2, 120, edH);
-        MakeLabel("Min:", sx + 420, sy + gap + 5, 50, 22, 1);
-        MakeEdit(EDT_SEARCH_TXN_MIN, sx + 470, sy + gap + 2, 80, edH);
-        MakeLabel("Max:", sx + 5, sy + gap*2 + 5, 50, 22, 1);
-        MakeEdit(EDT_SEARCH_TXN_MAX, sx + 60, sy + gap*2 + 2, 80, edH);
-        MakeBtn(BTN_DO_SEARCH_TXN, "Search", sx + 160, sy + gap*2, 100, btnH, RGB(30,50,100));
+        int cw = rc.right - SIDEBAR_W - 60;
+        int fY = sy + 58;
+        int col1X = sx + 20, col2X = sx + cw/2 + 10;
+        int col1V = sx + 130, col2V = sx + cw/2 + 120;
+        MakeEdit(EDT_SEARCH_TXN_ACC,  col1V, fY + 18, 140, 32);
+        MakeEdit(EDT_SEARCH_TXN_TYPE, col2V, fY + 18, 140, 32);
+        MakeEdit(EDT_SEARCH_TXN_FROM, col1V, fY + 68, 140, 32);
+        MakeEdit(EDT_SEARCH_TXN_TO,   col2V, fY + 68, 140, 32);
+        MakeEdit(EDT_SEARCH_TXN_MIN,  col1V, fY + 118, 100, 32);
+        MakeEdit(EDT_SEARCH_TXN_MAX,  col2V, fY + 118, 100, 32);
+        MakeBtn(BTN_DO_SEARCH_TXN, "Search", sx + cw - 145, fY + 115, 125, 36, Primary);
         break;
     }
     case SCR_ADMIN_AUDIT: break;
     case SCR_ADMIN_LOANS: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_LOAN_ACC, sx + 115, sy + 2, edW, edH);
-        MakeLabel("Loan Amount:", sx + 5, sy + gap + 5, 150, 22, 1);
-        MakeEdit(EDT_LOAN_AMT, sx + 115, sy + gap + 2, edW, edH);
-        MakeLabel("Term (months):", sx + 5, sy + gap*2 + 5, 150, 22, 1);
-        MakeEdit(EDT_LOAN_TERM, sx + 115, sy + gap*2 + 2, edW, edH);
-        MakeBtn(BTN_DO_LOAN, "Approve Loan", sx + 30, sy + gap*3 + 10, btnW, btnH, RGB(255,143,0));
+        int fY = sy + 58;
+        MakeEdit(EDT_LOAN_ACC,  sx + 160, fY + 44,  210, 32);
+        MakeEdit(EDT_LOAN_AMT,  sx + 160, fY + 94,  210, 32);
+        MakeEdit(EDT_LOAN_TERM, sx + 160, fY + 144, 110, 32);
+        MakeBtn(BTN_DO_LOAN, "Approve Loan", sx + 290, fY + 140, 150, 38, Warning);
         break;
     }
     case SCR_ADMIN_CASH: break;
     case SCR_ADMIN_DAILY: break;
-    case SCR_ATM_MENU: {
-        int btnX = rc.right - 120;
-        MakeBtn(BTN_LOGOUT, "Logout", btnX, HEADER_H + 30, 100, 36, RGB(220,53,69));
-        break;
-    }
-    case SCR_ATM_BALANCE: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_ACCNO, sx + 115, sy + 2, edW, edH);
-        MakeLabel("PIN:", sx + 5, sy + gap + 5, 150, 22, 1);
-        MakeEdit(EDT_PIN, sx + 115, sy + gap + 2, edW, edH, true);
-        MakeBtn(BTN_DO_LOGIN, "View Balance", sx + 30, sy + gap*2 + 10, btnW, btnH, RGB(30,50,100));
-        break;
-    }
+    case SCR_ATM_MENU: break;
+    case SCR_ATM_BALANCE: break;
     case SCR_ATM_DEPOSIT: {
-        MakeLabel("Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_ACCNO, sx + 115, sy + 2, edW, edH);
-        MakeLabel("Amount:", sx + 5, sy + gap + 5, 150, 22, 1);
-        MakeEdit(EDT_AMT, sx + 115, sy + gap + 2, edW, edH);
-        MakeBtn(BTN_DO_DEPOSIT, "Deposit", sx + 30, sy + gap*2 + 10, btnW, btnH, RGB(46,160,67));
+        int cardY = sy + 58;
+        MakeEdit(EDT_AMT,      sx + 175, cardY + 22, 220, 36);
+        MakeBtn(BTN_DO_DEPOSIT, "Deposit Cash", sx + 175, cardY + 75, 135, 40, Success);
+        MakeBtn(BTN_BACK,       "Back",         sx + 320, cardY + 75, 90, 40, RGB(100,116,139));
         break;
     }
     case SCR_ATM_WITHDRAW: {
-        MakeLabel("Amount:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_AMT, sx + 115, sy + 2, edW, edH);
-        MakeBtn(BTN_DO_WITHDRAW, "Withdraw", sx + 30, sy + gap + 10, btnW, btnH, RGB(220,53,69));
+        int cardY = sy + 58;
+        MakeEdit(EDT_AMT,      sx + 175, cardY + 22, 220, 36);
+        MakeBtn(BTN_DO_WITHDRAW, "Withdraw Cash", sx + 175, cardY + 75, 140, 40, Error);
+        MakeBtn(BTN_BACK,        "Back",          sx + 325, cardY + 75, 90, 40, RGB(100,116,139));
         break;
     }
     case SCR_ATM_TRANSFER: {
-        MakeLabel("To Account #:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_TRANSFER_TARGET, sx + 150, sy + 2, edW, edH);
-        MakeLabel("Amount:", sx + 5, sy + gap + 5, 150, 22, 1);
-        MakeEdit(EDT_TRANSFER_AMT, sx + 150, sy + gap + 2, edW, edH);
-        MakeBtn(BTN_DO_TRANSFER, "Transfer", sx + 30, sy + gap*2 + 10, btnW, btnH, RGB(156,39,176));
+        int cardY = sy + 58;
+        MakeEdit(EDT_TRANSFER_TARGET, sx + 185, cardY + 22, 220, 36);
+        MakeEdit(EDT_TRANSFER_AMT,    sx + 185, cardY + 72, 220, 36);
+        MakeBtn(BTN_DO_TRANSFER, "Transfer Funds", sx + 185, cardY + 126, 140, 40, Secondary);
+        MakeBtn(BTN_BACK,        "Back",           sx + 335, cardY + 126, 90, 40, RGB(100,116,139));
         break;
     }
     case SCR_ATM_MINISTATE: break;
     case SCR_ATM_CHANGEPIN: {
-        MakeLabel("Current PIN:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_PIN, sx + 170, sy + 2, edW, edH, true);
-        MakeLabel("New PIN:", sx + 5, sy + gap + 5, 150, 22, 1);
-        MakeEdit(EDT_NEWPIN, sx + 170, sy + gap + 2, edW, edH, true);
-        MakeLabel("Confirm New PIN:", sx + 5, sy + gap*2 + 5, 150, 22, 1);
-        MakeEdit(EDT_CONFIRMPIN, sx + 170, sy + gap*2 + 2, edW, edH, true);
-        MakeBtn(BTN_DO_CHANGEPIN, "Change PIN", sx + 30, sy + gap*3 + 10, btnW, btnH, RGB(255,87,34));
+        int cardY = sy + 58;
+        MakeEdit(EDT_PIN,        sx + 185, cardY + 22,  210, 36, true);
+        MakeEdit(EDT_NEWPIN,     sx + 185, cardY + 72,  210, 36, true);
+        MakeEdit(EDT_CONFIRMPIN, sx + 185, cardY + 122, 210, 36, true);
+        MakeBtn(BTN_DO_CHANGEPIN, "Change PIN", sx + 185, cardY + 176, 135, 40, Warning);
+        MakeBtn(BTN_BACK,         "Back",       sx + 330, cardY + 176, 90, 40, RGB(100,116,139));
         break;
     }
     case SCR_ATM_INFO: break;
     case SCR_OTP: {
-        MakeLabel("Enter OTP:", sx + 5, sy + 5, 150, 22, 1);
-        MakeEdit(EDT_OTP, sx + 150, sy + 2, 200, 28);
-        MakeBtn(BTN_DO_OTP, "Verify OTP", sx + 30, sy + 60, 140, 38, RGB(30,50,100));
-        MakeBtn(BTN_BACK, "Cancel", sx + 190, sy + 60, 120, 38, RGB(128,128,128));
+        int cx = rc.right / 2;
+        int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+        int cw2 = 440, ch2 = 270;
+        int cardX = cx - cw2/2, cardY = cy - ch2/2;
+        MakeEdit(EDT_OTP,       cardX + 140, cardY + 164, 250, 36);
+        MakeBtn(BTN_DO_OTP, "Verify OTP", cardX + 140, cardY + 212, 130, 40, Primary);
+        MakeBtn(BTN_BACK,   "Cancel",     cardX + 280, cardY + 212, 110, 40, RGB(100, 116, 139));
         break;
     }
     }
@@ -1706,11 +1819,18 @@ static void HandleCommand(int id) {
         int accNo = atoi(accStr.c_str());
         loadAccounts(g.accounts);
         int idx = findAccountIndex(accNo, g.accounts);
-        if (idx < 0) { SetStatus("Account not found", 2); break; }
+        if (idx < 0) { 
+            g.lastSearchAccNo = -1;
+            SetStatus("Account not found", 2); 
+            InvalidateRect(gHwnd, NULL, TRUE);
+            break; 
+        }
+        g.lastSearchAccNo = accNo;
         g.currentAccIdx = idx;
         stringstream ss;
         ss << "Found: " << g.accounts[idx].name << " | Rs. " << fixed << setprecision(2) << g.accounts[idx].balance;
         SetStatus(ss.str(), 1);
+        InvalidateRect(gHwnd, NULL, TRUE);
         break;
     }
 
@@ -2064,20 +2184,26 @@ static void DrawBtnRaw(DRAWITEMSTRUCT* di, int customColor) {
     RECT rc = di->rcItem;
     bool pressed = di->itemState & ODS_SELECTED;
     bool focused = di->itemState & ODS_FOCUS;
+    bool hovered = (GetProp(di->hwndItem, "HOVER") != NULL);
 
-    COLORREF bgClr = (customColor != 0) ? (COLORREF)customColor : RGB(100,100,120);
+    COLORREF bgClr = (customColor != 0) ? (COLORREF)customColor : Secondary;
     if (pressed) {
-        int r = max(0, GetRValue(bgClr) - 30);
-        int g2 = max(0, GetGValue(bgClr) - 30);
-        int b = max(0, GetBValue(bgClr) - 30);
+        int r = max(0, GetRValue(bgClr) - 35);
+        int g2 = max(0, GetGValue(bgClr) - 35);
+        int b = max(0, GetBValue(bgClr) - 35);
+        bgClr = RGB(r, g2, b);
+    } else if (hovered) {
+        int r = min(255, GetRValue(bgClr) + 25);
+        int g2 = min(255, GetGValue(bgClr) + 25);
+        int b = min(255, GetBValue(bgClr) + 25);
         bgClr = RGB(r, g2, b);
     }
 
     HBRUSH br = CreateSolidBrush(bgClr);
-    HPEN pen = CreatePen(PS_SOLID, 1, RGB(max(0,GetRValue(bgClr)-20), max(0,GetGValue(bgClr)-20), max(0,GetBValue(bgClr)-20)));
+    HPEN pen = CreatePen(PS_SOLID, 1, hovered ? RGB(255,255,255) : bgClr);
     HPEN oldPen = (HPEN)SelectObject(hdc, pen);
     HBRUSH oldBr = (HBRUSH)SelectObject(hdc, br);
-    RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, 8, 8);
+    RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, 20, 20);
     SelectObject(hdc, oldPen);
     SelectObject(hdc, oldBr);
     DeleteObject(br);
@@ -2089,14 +2215,19 @@ static void DrawBtnRaw(DRAWITEMSTRUCT* di, int customColor) {
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(255,255,255));
     HFONT oldFont = (HFONT)SelectObject(hdc, hFontBold);
-    DrawText(hdc, txt, -1, &rc, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+    RECT txtRc = rc;
+    if (pressed) {
+        txtRc.top += 1;
+        txtRc.left += 1;
+    }
+    DrawText(hdc, txt, -1, &txtRc, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
     SelectObject(hdc, oldFont);
 
     if (focused) {
         HPEN focusPen = CreatePen(PS_DOT, 1, RGB(255,255,255));
         HPEN oldFP = (HPEN)SelectObject(hdc, focusPen);
         HBRUSH oldFB = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));
-        DrawFocusRect(hdc, &rc);
+        RoundRect(hdc, rc.left + 2, rc.top + 2, rc.right - 2, rc.bottom - 2, 16, 16);
         SelectObject(hdc, oldFP);
         SelectObject(hdc, oldFB);
         DeleteObject(focusPen);
@@ -2137,8 +2268,17 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         int mx = LOWORD(lp);
         int my = HIWORD(lp);
         if (mx < SIDEBAR_W && my > HEADER_H) {
+            int hit = SidebarHitTest(lp, g);
+            if (hit != gHoverSidebarIdx) {
+                gHoverSidebarIdx = hit;
+                InvalidateRect(hwnd, NULL, FALSE);
+            }
             SetCursor(LoadCursor(NULL, IDC_HAND));
         } else {
+            if (gHoverSidebarIdx != -1) {
+                gHoverSidebarIdx = -1;
+                InvalidateRect(hwnd, NULL, FALSE);
+            }
             SetCursor(LoadCursor(NULL, IDC_ARROW));
         }
         return 0;
@@ -2153,6 +2293,14 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return TRUE;
         }
         return DefWindowProc(hwnd, msg, wp, lp);
+    }
+
+    case WM_SIZE: {
+        if (wp != SIZE_MINIMIZED) {
+            CreateScreenControls();
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
+        return 0;
     }
 
     case WM_COMMAND:
@@ -2231,13 +2379,13 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int) {
 
     HWND hwnd = CreateWindowEx(
         0, "NationalBankGUI", "National Bank - Banking System",
-        WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX,
-        wx, wy, WIN_W, WIN_H,
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, WIN_W, WIN_H,
         NULL, NULL, hInst, NULL);
 
     if (!hwnd) return 1;
 
-    ShowWindow(hwnd, SW_SHOW);
+    ShowWindow(hwnd, SW_SHOWMAXIMIZED);
     UpdateWindow(hwnd);
 
     gHwnd = hwnd;

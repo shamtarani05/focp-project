@@ -43,4 +43,6 @@ if not exist backup mkdir backup
 
 echo Launching banking system...
 echo.
-start build\banking.exe
+cd build
+start banking.exe
+cd ..

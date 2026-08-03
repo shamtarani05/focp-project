@@ -2,6 +2,9 @@
 #define GUI_H
 
 #include <windows.h>
+#ifndef GWL_USERDATA
+#define GWL_USERDATA GWLP_USERDATA
+#endif
 #include <string>
 #include <vector>
 #include "core/types.h"
