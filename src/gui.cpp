@@ -20,18 +20,43 @@ struct SpeakData {
     string text;
 };
 
+static HANDLE g_hCurrentSpeechProcess = NULL;
+static CRITICAL_SECTION g_csSpeech;
+static bool g_csSpeechInit = false;
+
+static void InitSpeechCS() {
+    if (!g_csSpeechInit) {
+        InitializeCriticalSection(&g_csSpeech);
+        g_csSpeechInit = true;
+    }
+}
+
+static void StopCurrentSpeech() {
+    InitSpeechCS();
+    EnterCriticalSection(&g_csSpeech);
+    if (g_hCurrentSpeechProcess != NULL) {
+        TerminateProcess(g_hCurrentSpeechProcess, 0);
+        CloseHandle(g_hCurrentSpeechProcess);
+        g_hCurrentSpeechProcess = NULL;
+    }
+    LeaveCriticalSection(&g_csSpeech);
+}
+
 static DWORD WINAPI SpeakThread(LPVOID lpParam) {
     SpeakData* data = (SpeakData*)lpParam;
-    string escaped = data->text;
+    string text = data->text;
     delete data;
 
+    if (text.empty()) return 0;
+
+    string escaped = text;
     size_t pos = 0;
     while ((pos = escaped.find("'", pos)) != string::npos) {
-        escaped.insert(pos, "'");
+        escaped.insert(pos, "''");
         pos += 2;
     }
 
-    string cmd = "powershell -NoProfile -Command \"Add-Type -AssemblyName System.Speech; "
+    string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Add-Type -AssemblyName System.Speech; "
                  "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; "
                  "$s.Speak('" + escaped + "')\"";
 
@@ -41,20 +66,38 @@ static DWORD WINAPI SpeakThread(LPVOID lpParam) {
     si.cb = sizeof(STARTUPINFO);
     si.dwFlags = STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
-    CreateProcess(NULL, &cmd[0], &sa, &sa, TRUE,
-                  CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
-    if (pi.hProcess) {
-        WaitForSingleObject(pi.hProcess, 8000);
-        CloseHandle(pi.hProcess);
+
+    if (CreateProcess(NULL, &cmd[0], &sa, &sa, TRUE,
+                      CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
+        InitSpeechCS();
+        EnterCriticalSection(&g_csSpeech);
+        g_hCurrentSpeechProcess = pi.hProcess;
+        LeaveCriticalSection(&g_csSpeech);
+
         CloseHandle(pi.hThread);
+
+        WaitForSingleObject(pi.hProcess, 8000);
+
+        EnterCriticalSection(&g_csSpeech);
+        if (g_hCurrentSpeechProcess == pi.hProcess) {
+            CloseHandle(pi.hProcess);
+            g_hCurrentSpeechProcess = NULL;
+        }
+        LeaveCriticalSection(&g_csSpeech);
     }
     return 0;
 }
 
 static void SpeakText(const string& text) {
+    if (text.empty()) return;
+    StopCurrentSpeech();
+
     SpeakData* data = new SpeakData();
     data->text = text;
-    CreateThread(NULL, 0, SpeakThread, data, 0, NULL);
+    HANDLE hThread = CreateThread(NULL, 0, SpeakThread, data, 0, NULL);
+    if (hThread) {
+        CloseHandle(hThread);
+    }
 }
 
 static string ScreenGuide(Screen screen) {
@@ -480,6 +523,12 @@ static LRESULT CALLBACK BtnSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
             TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, hwnd, 0 };
             TrackMouseEvent(&tme);
             InvalidateRect(hwnd, NULL, FALSE);
+
+            char btnText[128] = {0};
+            GetWindowText(hwnd, btnText, 127);
+            if (strlen(btnText) > 0) {
+                SpeakText(btnText);
+            }
         }
         break;
     }
@@ -2735,6 +2784,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 gHoverSidebarIdx = hit;
                 RECT sbRc = {0, HEADER_H, SIDEBAR_W, 2000};
                 InvalidateRect(hwnd, &sbRc, FALSE); // Invalidate sidebar only for butter-smooth hover
+                if (hit >= 0 && hit < (int)(sizeof(sidebarItems)/sizeof(sidebarItems[0]))) {
+                    SpeakText(sidebarItems[hit].label);
+                }
             }
             SetCursor(LoadCursor(NULL, IDC_HAND));
         } else {

@@ -412,3 +412,61 @@
 2026-08-04 23:53:50|Navigation|Sidebar -> Withdraw
 2026-08-04 23:53:54|Navigation|Sidebar -> Deposit
 2026-08-04 23:54:03|Deposit|Account 1002 deposited Rs. 5000.000000
+2026-08-05 00:00:15|ATM Login|Account 1002 logged in
+2026-08-05 00:00:23|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:00:26|Navigation|Sidebar -> Deposit
+2026-08-05 00:00:29|Navigation|Sidebar -> Withdraw
+2026-08-05 00:00:32|Navigation|Sidebar -> Transfer
+2026-08-05 00:00:34|Navigation|Sidebar -> Mini Statement
+2026-08-05 00:00:35|Navigation|Sidebar -> Change PIN
+2026-08-05 00:00:36|Navigation|Sidebar -> Mini Statement
+2026-08-05 00:00:37|Navigation|Sidebar -> Transfer
+2026-08-05 00:00:37|Navigation|Sidebar -> Withdraw
+2026-08-05 00:00:38|Navigation|Sidebar -> Deposit
+2026-08-05 00:00:39|Navigation|Sidebar -> Deposit
+2026-08-05 00:00:39|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:00:54|Navigation|Sidebar -> Mini Statement
+2026-08-05 00:00:57|Navigation|Sidebar -> ATM Menu
+2026-08-05 00:01:07|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:01:09|Navigation|Sidebar -> Deposit
+2026-08-05 00:01:11|Navigation|Sidebar -> Withdraw
+2026-08-05 00:01:12|Navigation|Sidebar -> Deposit
+2026-08-05 00:01:13|Navigation|Sidebar -> Withdraw
+2026-08-05 00:01:14|Navigation|Sidebar -> Transfer
+2026-08-05 00:01:15|Navigation|Sidebar -> Mini Statement
+2026-08-05 00:01:15|Navigation|Sidebar -> Change PIN
+2026-08-05 00:01:16|Navigation|Sidebar -> ATM Info
+2026-08-05 00:01:17|Navigation|Sidebar -> Transfer
+2026-08-05 00:01:34|Transfer (OTP)|Account 1002 transferred Rs. 50000.000000 to 1003
+2026-08-05 00:01:52|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:01:57|Navigation|Sidebar -> Transfer
+2026-08-05 00:02:03|Transfer|Account 1002 transferred Rs. 10000.000000 to 1001
+2026-08-05 00:02:08|Navigation|Sidebar -> ATM Menu
+2026-08-05 00:02:09|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:02:15|Navigation|Sidebar -> Withdraw
+2026-08-05 00:02:23|ATM Login|Account 1001 logged in
+2026-08-05 00:02:26|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:02:29|Navigation|Sidebar -> Deposit
+2026-08-05 00:02:30|Navigation|Sidebar -> Withdraw
+2026-08-05 00:02:31|Navigation|Sidebar -> Transfer
+2026-08-05 00:02:31|Navigation|Sidebar -> Mini Statement
+2026-08-05 00:02:36|Navigation|Sidebar -> Change PIN
+2026-08-05 00:02:37|Navigation|Sidebar -> ATM Info
+2026-08-05 00:02:38|Navigation|Sidebar -> Change PIN
+2026-08-05 00:02:38|Navigation|Sidebar -> Mini Statement
+2026-08-05 00:02:39|Navigation|Sidebar -> Transfer
+2026-08-05 00:03:00|Transfer|Account 1001 transferred Rs. 5000.000000 to 1002
+2026-08-05 00:03:03|Navigation|Sidebar -> ATM Menu
+2026-08-05 00:03:04|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:03:17|ATM Login|Account 1002 logged in
+2026-08-05 00:03:18|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:03:22|Navigation|Sidebar -> Transfer
+2026-08-05 00:03:37|Transfer (OTP)|Account 1002 transferred Rs. 500000.000000 to 1001
+2026-08-05 00:03:41|Navigation|Sidebar -> Transfer
+2026-08-05 00:03:42|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:03:46|Navigation|Sidebar -> Transfer
+2026-08-05 00:03:55|Transfer|Account 1002 transferred Rs. 10000.000000 to 1001
+2026-08-05 00:03:58|Navigation|Sidebar -> ATM Menu
+2026-08-05 00:03:59|Navigation|Sidebar -> ATM Balance
+2026-08-05 00:04:09|ATM Login|Account 1001 logged in
+2026-08-05 00:04:10|Navigation|Sidebar -> ATM Balance
