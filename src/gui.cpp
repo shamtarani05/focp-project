@@ -2601,7 +2601,24 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         HDC hdc = BeginPaint(hwnd, &ps);
         RECT rc;
         GetClientRect(hwnd, &rc);
-        PaintScreen(hdc, rc);
+
+        // Double-buffering offscreen memory DC for 100% flicker-free rendering
+        HDC memDC = CreateCompatibleDC(hdc);
+        HBITMAP memBM = CreateCompatibleBitmap(hdc, rc.right, rc.bottom);
+        HBITMAP oldBM = (HBITMAP)SelectObject(memDC, memBM);
+
+        PaintScreen(memDC, rc);
+
+        // Atomic Blit of offscreen buffer to screen
+        BitBlt(hdc, ps.rcPaint.left, ps.rcPaint.top,
+               ps.rcPaint.right - ps.rcPaint.left,
+               ps.rcPaint.bottom - ps.rcPaint.top,
+               memDC, ps.rcPaint.left, ps.rcPaint.top, SRCCOPY);
+
+        SelectObject(memDC, oldBM);
+        DeleteObject(memBM);
+        DeleteDC(memDC);
+
         EndPaint(hwnd, &ps);
         return 0;
     }
@@ -2623,13 +2640,15 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             int hit = SidebarHitTest(lp, g);
             if (hit != gHoverSidebarIdx) {
                 gHoverSidebarIdx = hit;
-                InvalidateRect(hwnd, NULL, FALSE);
+                RECT sbRc = {0, HEADER_H, SIDEBAR_W, 2000};
+                InvalidateRect(hwnd, &sbRc, FALSE); // Invalidate sidebar only for butter-smooth hover
             }
             SetCursor(LoadCursor(NULL, IDC_HAND));
         } else {
             if (gHoverSidebarIdx != -1) {
                 gHoverSidebarIdx = -1;
-                InvalidateRect(hwnd, NULL, FALSE);
+                RECT sbRc = {0, HEADER_H, SIDEBAR_W, 2000};
+                InvalidateRect(hwnd, &sbRc, FALSE);
             }
             SetCursor(LoadCursor(NULL, IDC_ARROW));
         }

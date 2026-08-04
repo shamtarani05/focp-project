@@ -356,3 +356,9 @@
 2026-08-04 17:12:48|Admin Login|Administrator logged in
 2026-08-04 17:21:14|Admin Login|Administrator logged in
 2026-08-04 17:21:29|ATM Login|Account 1002 logged in
+2026-08-04 17:22:49|ATM Login|Account 1002 logged in
+2026-08-04 17:34:53|ATM Login|Account 1002 logged in
+2026-08-04 17:35:03|Admin Login|Administrator logged in
+2026-08-04 17:35:39|Reactivation Request|Account 1002 submitted reactivation request #6
+2026-08-04 17:35:56|Admin Login|Administrator logged in
+2026-08-04 17:35:59|Reactivation Approved|Request 6 for account 1002 approved
