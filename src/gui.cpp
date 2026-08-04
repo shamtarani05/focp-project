@@ -2479,6 +2479,14 @@ static void DrawBtnRaw(DRAWITEMSTRUCT* di, int customColor) {
 
     int id = GetWindowLong(di->hwndItem, GWL_ID);
 
+    // Pre-fill button window background with parent container background (Primary for header buttons)
+    // so the pixels outside RoundRect curves match the surrounding background perfectly with zero white corners!
+    bool isHeaderBtn = (id == BTN_NOTIF_REQUESTS || id == BTN_DO_BACKUP || id == BTN_LOGOUT);
+    COLORREF parentBgClr = isHeaderBtn ? Primary : Bg;
+    HBRUSH parentBr = CreateSolidBrush(parentBgClr);
+    FillRect(hdc, &rc, parentBr);
+    DeleteObject(parentBr);
+
     // Custom notification bell button rendering
     if (id == BTN_NOTIF_REQUESTS) {
         COLORREF bgClr = RGB(30, 41, 59);
@@ -2546,7 +2554,7 @@ static void DrawBtnRaw(DRAWITEMSTRUCT* di, int customColor) {
     HPEN pen = CreatePen(PS_SOLID, 1, hovered ? RGB(255,255,255) : bgClr);
     HPEN oldPen = (HPEN)SelectObject(hdc, pen);
     HBRUSH oldBr = (HBRUSH)SelectObject(hdc, br);
-    RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, 20, 20);
+    RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, isHeaderBtn ? 12 : 20, isHeaderBtn ? 12 : 20);
     SelectObject(hdc, oldPen);
     SelectObject(hdc, oldBr);
     DeleteObject(br);
@@ -2567,7 +2575,7 @@ static void DrawBtnRaw(DRAWITEMSTRUCT* di, int customColor) {
     SelectObject(hdc, oldFont);
 
     // Skip white dotted focus box for header buttons to keep clean modern look
-    if (focused && id != BTN_NOTIF_REQUESTS && id != BTN_DO_BACKUP && id != BTN_LOGOUT) {
+    if (focused && !isHeaderBtn) {
         HPEN focusPen = CreatePen(PS_DOT, 1, RGB(255,255,255));
         HPEN oldFP = (HPEN)SelectObject(hdc, focusPen);
         HBRUSH oldFB = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));

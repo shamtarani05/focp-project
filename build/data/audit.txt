@@ -354,3 +354,5 @@
 2026-08-04 17:10:44|ATM Login|Account 1002 logged in
 2026-08-04 17:10:56|Admin Login|Administrator logged in
 2026-08-04 17:12:48|Admin Login|Administrator logged in
+2026-08-04 17:21:14|Admin Login|Administrator logged in
+2026-08-04 17:21:29|ATM Login|Account 1002 logged in
