@@ -31,6 +31,11 @@ bool saveCashInventory(const vector<CashNote>& inventory);
 bool appendAuditEntry(const AuditEntry& entry);
 vector<AuditEntry> loadAuditEntries();
 
+bool loadReactivationRequests(vector<ReactivationRequest>& requests);
+bool saveReactivationRequests(const vector<ReactivationRequest>& requests);
+bool appendReactivationRequest(const ReactivationRequest& req);
+
+
 bool generateReceipt(const Transaction& t, const Account& acc);
 bool backupData();
 

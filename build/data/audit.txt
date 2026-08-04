@@ -223,3 +223,134 @@
 2026-08-03 11:23:53|Navigation|Sidebar -> Transfer
 2026-08-03 11:23:54|Navigation|Sidebar -> Withdraw
 2026-08-03 11:23:55|Navigation|Sidebar -> Deposit
+2026-08-04 11:18:01|Admin Login|Administrator logged in
+2026-08-04 11:18:12|Navigation|Sidebar -> Create Account
+2026-08-04 11:18:15|Navigation|Sidebar -> View Accounts
+2026-08-04 11:18:18|Navigation|Sidebar -> Search Account
+2026-08-04 11:18:19|Navigation|Sidebar -> Freeze Account
+2026-08-04 11:18:20|Navigation|Sidebar -> Unfreeze Acct
+2026-08-04 11:18:21|Navigation|Sidebar -> Unlock Account
+2026-08-04 11:18:22|Navigation|Sidebar -> Transactions
+2026-08-04 11:18:23|Navigation|Sidebar -> Transactions
+2026-08-04 11:18:23|Navigation|Sidebar -> Search Txns
+2026-08-04 11:18:24|Navigation|Sidebar -> Audit Log
+2026-08-04 11:18:25|Navigation|Sidebar -> Loans
+2026-08-04 11:18:26|Navigation|Sidebar -> Cash Inventory
+2026-08-04 11:18:27|Navigation|Sidebar -> Daily Report
+2026-08-04 11:18:58|Admin Login|Administrator logged in
+2026-08-04 11:19:01|Navigation|Sidebar -> Freeze Account
+2026-08-04 11:19:01|Navigation|Sidebar -> Unfreeze Acct
+2026-08-04 11:19:11|Account Unfrozen|Account 1002 unfrozen
+2026-08-04 11:19:28|Navigation|Sidebar -> Dashboard
+2026-08-04 11:19:36|ATM Login|Account 1002 logged in
+2026-08-04 11:19:38|Navigation|Sidebar -> ATM Balance
+2026-08-04 11:19:39|Navigation|Sidebar -> Deposit
+2026-08-04 11:19:40|Navigation|Sidebar -> Withdraw
+2026-08-04 11:19:41|Navigation|Sidebar -> Transfer
+2026-08-04 11:19:42|Navigation|Sidebar -> Mini Statement
+2026-08-04 11:19:43|Navigation|Sidebar -> Change PIN
+2026-08-04 11:19:43|Navigation|Sidebar -> ATM Info
+2026-08-04 11:19:50|Navigation|Sidebar -> Mini Statement
+2026-08-04 16:21:58|Navigation|Sidebar -> 
+2026-08-04 16:22:24|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:22:26|Navigation|Sidebar -> Deposit
+2026-08-04 16:22:28|Navigation|Sidebar -> Deposit
+2026-08-04 16:22:29|Navigation|Sidebar -> Withdraw
+2026-08-04 16:22:31|Navigation|Sidebar -> Transfer
+2026-08-04 16:22:32|Navigation|Sidebar -> ATM Menu
+2026-08-04 16:23:24|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:23:25|Navigation|Sidebar -> Deposit
+2026-08-04 16:23:32|Navigation|Sidebar -> Deposit
+2026-08-04 16:23:33|Navigation|Sidebar -> Withdraw
+2026-08-04 16:23:41|Navigation|Sidebar -> Transfer
+2026-08-04 16:23:49|Navigation|Sidebar -> ATM Menu
+2026-08-04 16:23:50|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:23:51|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:23:52|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:23:55|Navigation|Sidebar -> Change PIN
+2026-08-04 16:23:58|Navigation|Sidebar -> ATM Info
+2026-08-04 16:25:01|Reactivation Request|Account 1002 submitted reactivation request #1
+2026-08-04 16:25:42|Admin Login|Administrator logged in
+2026-08-04 16:25:48|Navigation|Sidebar -> Create Account
+2026-08-04 16:25:49|Navigation|Sidebar -> View Accounts
+2026-08-04 16:25:53|Navigation|Sidebar -> Search Account
+2026-08-04 16:25:54|Navigation|Sidebar -> Freeze Account
+2026-08-04 16:25:55|Navigation|Sidebar -> Unfreeze Acct
+2026-08-04 16:25:58|Navigation|Sidebar -> Unlock Account
+2026-08-04 16:26:04|Navigation|Sidebar -> Daily Report
+2026-08-04 16:38:01|Reactivation Request|Account 1002 submitted reactivation request #2
+2026-08-04 16:38:13|Admin Login|Administrator logged in
+2026-08-04 16:38:21|Navigation|Sidebar -> Daily Report
+2026-08-04 16:38:37|Reactivation Approved|Request 1 for account 1002 approved
+2026-08-04 16:38:49|Navigation|Sidebar -> Daily Report
+2026-08-04 16:38:50|Navigation|Sidebar -> Unlock Account
+2026-08-04 16:38:52|Navigation|Sidebar -> Create Account
+2026-08-04 16:38:55|Navigation|Sidebar -> Dashboard
+2026-08-04 16:38:56|Navigation|Sidebar -> Create Account
+2026-08-04 16:39:18|ATM Login|Account 1002 logged in
+2026-08-04 16:39:20|Navigation|Sidebar -> ATM Menu
+2026-08-04 16:39:21|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:39:23|Navigation|Sidebar -> Deposit
+2026-08-04 16:39:24|Navigation|Sidebar -> Withdraw
+2026-08-04 16:39:26|Navigation|Sidebar -> Transfer
+2026-08-04 16:39:27|Navigation|Sidebar -> Mini Statement
+2026-08-04 16:39:29|Navigation|Sidebar -> Change PIN
+2026-08-04 16:39:33|Navigation|Sidebar -> ATM Info
+2026-08-04 16:43:33|Navigation|Sidebar -> Deposit
+2026-08-04 16:43:35|Navigation|Sidebar -> Withdraw
+2026-08-04 16:45:04|Navigation|Sidebar -> Deposit
+2026-08-04 16:45:12|Navigation|Sidebar -> ATM Menu
+2026-08-04 16:45:13|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:45:15|Navigation|Sidebar -> Deposit
+2026-08-04 16:45:16|Navigation|Sidebar -> Withdraw
+2026-08-04 16:45:17|Navigation|Sidebar -> Transfer
+2026-08-04 16:45:18|Navigation|Sidebar -> Transfer
+2026-08-04 16:45:19|Navigation|Sidebar -> Mini Statement
+2026-08-04 16:45:20|Navigation|Sidebar -> Change PIN
+2026-08-04 16:45:21|Navigation|Sidebar -> ATM Info
+2026-08-04 16:46:20|Reactivation Request|Account 1002 submitted reactivation request #3
+2026-08-04 16:46:28|Admin Login|Administrator logged in
+2026-08-04 16:46:49|Reactivation Approved|Request 3 for account 1002 approved
+2026-08-04 16:47:07|ATM Login|Account 1002 logged in
+2026-08-04 16:53:23|Reactivation Request|Account 1002 submitted reactivation request #4
+2026-08-04 16:53:30|Admin Login|Administrator logged in
+2026-08-04 16:53:38|Reactivation Approved|Request 2 for account 1002 approved
+2026-08-04 16:53:40|Reactivation Approved|Request 4 for account 1002 approved
+2026-08-04 16:54:24|Reactivation Request|Account 1002 submitted reactivation request #5
+2026-08-04 16:54:35|Admin Login|Administrator logged in
+2026-08-04 16:54:40|Reactivation Approved|Request 5 for account 1002 approved
+2026-08-04 16:54:44|Navigation|Sidebar -> Create Account
+2026-08-04 16:54:45|Navigation|Sidebar -> Dashboard
+2026-08-04 16:54:46|Navigation|Sidebar -> View Accounts
+2026-08-04 16:54:49|Navigation|Sidebar -> Search Account
+2026-08-04 16:54:56|Navigation|Sidebar -> Freeze Account
+2026-08-04 16:54:57|Navigation|Sidebar -> Unfreeze Acct
+2026-08-04 16:54:58|Navigation|Sidebar -> Unlock Account
+2026-08-04 16:54:59|Navigation|Sidebar -> Transactions
+2026-08-04 16:55:00|Navigation|Sidebar -> Search Txns
+2026-08-04 16:55:03|Navigation|Sidebar -> Audit Log
+2026-08-04 16:55:06|Navigation|Sidebar -> Loans
+2026-08-04 16:55:10|Navigation|Sidebar -> Cash Inventory
+2026-08-04 16:55:11|Navigation|Sidebar -> Daily Report
+2026-08-04 16:55:12|Navigation|Sidebar -> Reactivation Req
+2026-08-04 16:55:29|ATM Login|Account 1002 logged in
+2026-08-04 16:55:51|Admin Login|Administrator logged in
+2026-08-04 16:55:53|Navigation|Sidebar -> Create Account
+2026-08-04 16:56:56|Account Created|Account 1003 created for Panda
+2026-08-04 16:56:58|Navigation|Sidebar -> Dashboard
+2026-08-04 16:56:59|Navigation|Sidebar -> Create Account
+2026-08-04 16:57:35|ATM Login|Account 1003 logged in
+2026-08-04 16:57:37|Navigation|Sidebar -> ATM Balance
+2026-08-04 16:57:41|Navigation|Sidebar -> Deposit
+2026-08-04 16:57:42|Navigation|Sidebar -> Withdraw
+2026-08-04 16:57:42|Navigation|Sidebar -> Transfer
+2026-08-04 16:57:43|Navigation|Sidebar -> Mini Statement
+2026-08-04 16:57:44|Navigation|Sidebar -> Change PIN
+2026-08-04 16:57:45|Navigation|Sidebar -> ATM Info
+2026-08-04 16:57:45|Navigation|Sidebar -> Change PIN
+2026-08-04 16:57:46|Navigation|Sidebar -> Mini Statement
+2026-08-04 16:57:47|Navigation|Sidebar -> ATM Menu
+2026-08-04 16:57:59|Admin Login|Administrator logged in
+2026-08-04 17:10:44|ATM Login|Account 1002 logged in
+2026-08-04 17:10:56|Admin Login|Administrator logged in
+2026-08-04 17:12:48|Admin Login|Administrator logged in

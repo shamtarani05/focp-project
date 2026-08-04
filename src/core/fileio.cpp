@@ -23,9 +23,10 @@ bool ensureDataFilesExist() {
         TRANSACTIONS_FILE.c_str(),
         AUDIT_FILE.c_str(),
         LOANS_FILE.c_str(),
-        CASH_FILE.c_str()
+        CASH_FILE.c_str(),
+        REACTIVATION_FILE.c_str()
     };
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 6; i++) {
         ifstream check(files[i]);
         if (!check.is_open()) {
             ofstream f(files[i]);
@@ -334,5 +335,57 @@ bool backupData() {
     ok &= copyFile(AUDIT_FILE, backupDir + "/audit.txt");
     ok &= copyFile(LOANS_FILE, backupDir + "/loans.txt");
     ok &= copyFile(CASH_FILE, backupDir + "/cash_inventory.txt");
+    ok &= copyFile(REACTIVATION_FILE, backupDir + "/reactivation_requests.txt");
     return ok;
+}
+
+// ============================
+// REACTIVATION REQUEST I/O
+// ============================
+
+bool loadReactivationRequests(vector<ReactivationRequest>& requests) {
+    requests.clear();
+    ifstream file(REACTIVATION_FILE);
+    if (!file.is_open()) return false;
+
+    string line;
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+        stringstream ss(line);
+        ReactivationRequest req;
+        string temp;
+        getline(ss, temp, '|'); req.requestId  = stoi(temp);
+        getline(ss, temp, '|'); req.accountNo  = stoi(temp);
+        getline(ss, req.name,     '|');
+        getline(ss, req.cnic,     '|');
+        getline(ss, req.reason,   '|');
+        getline(ss, req.dateTime, '|');
+        getline(ss, req.status,   '|');
+        requests.push_back(req);
+    }
+    file.close();
+    return true;
+}
+
+bool saveReactivationRequests(const vector<ReactivationRequest>& requests) {
+    ofstream file(REACTIVATION_FILE);
+    if (!file.is_open()) return false;
+
+    for (const auto& req : requests) {
+        file << req.requestId << "|" << req.accountNo << "|" << req.name << "|"
+             << req.cnic << "|" << req.reason << "|" << req.dateTime << "|" << req.status << "\n";
+    }
+    file.close();
+    return true;
+}
+
+bool appendReactivationRequest(const ReactivationRequest& req) {
+    ensureDirectoryExists(DATA_DIR);
+    ofstream file(REACTIVATION_FILE, ios::app);
+    if (!file.is_open()) return false;
+
+    file << req.requestId << "|" << req.accountNo << "|" << req.name << "|"
+         << req.cnic << "|" << req.reason << "|" << req.dateTime << "|" << req.status << "\n";
+    file.close();
+    return true;
 }

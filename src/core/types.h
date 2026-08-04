@@ -69,6 +69,18 @@ struct AuditEntry {
     AuditEntry(string t, string a, string d) : timestamp(t), action(a), details(d) {}
 };
 
+struct ReactivationRequest {
+    int    requestId;
+    int    accountNo;
+    string name;
+    string cnic;
+    string reason;
+    string dateTime;
+    string status;  // pending / approved / rejected
+
+    ReactivationRequest() : requestId(0), accountNo(0), status("pending") {}
+};
+
 const string DATA_DIR   = "data";
 const string RECEIPTS_DIR = "receipts";
 const string LOGS_DIR   = "logs";
@@ -78,6 +90,7 @@ const string TRANSACTIONS_FILE  = DATA_DIR + "/transactions.txt";
 const string AUDIT_FILE         = DATA_DIR + "/audit.txt";
 const string LOANS_FILE         = DATA_DIR + "/loans.txt";
 const string CASH_FILE          = DATA_DIR + "/cash_inventory.txt";
+const string REACTIVATION_FILE  = DATA_DIR + "/reactivation_requests.txt";
 
 const double DAILY_WITHDRAWAL_LIMIT = 50000.0;
 const double SAVINGS_INTEREST_RATE  = 0.05;

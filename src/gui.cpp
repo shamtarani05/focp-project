@@ -84,6 +84,8 @@ static string ScreenGuide(Screen screen) {
         case SCR_ATM_CHANGEPIN:return "Change your account PIN. Enter current PIN, new PIN, and confirm.";
         case SCR_ATM_INFO:  return "ATM information screen showing machine details and cash availability.";
         case SCR_OTP:       return "OTP verification. A one time password has been sent for large transfer verification. Please enter the OTP code.";
+        case SCR_CONTACT_ADMIN: return "Contact Administrator. Fill in your details and reason to request account reactivation.";
+        case SCR_ADMIN_REQUESTS: return "Reactivation Requests. Review and approve or reject account reactivation requests from customers.";
         default: return "";
     }
 }
@@ -111,6 +113,7 @@ enum EditID {
     EDT_LOAN_AMT, EDT_LOAN_TERM, EDT_LOAN_ACC,
     EDT_TRANSFER_TARGET, EDT_TRANSFER_AMT,
     EDT_OTP,
+    EDT_REASON,
 };
 
 enum BtnID {
@@ -128,7 +131,14 @@ enum BtnID {
     BTN_DO_SEARCH_TXN, BTN_DO_LOAN, BTN_DO_OTP,
     BTN_DO_BACKUP,
     BTN_CLEAR_CREATE, BTN_CLEAR_SEARCH,
+    BTN_DO_CONTACT_ADMIN,
+    BTN_ADMIN_REQUESTS,
+    BTN_CONTACT_ADMIN_SCREEN,
+    BTN_NOTIF_REQUESTS,
 };
+
+const int BTN_DYNAMIC_APPROVE_BASE = 20000;
+const int BTN_DYNAMIC_REJECT_BASE  = 21000;
 
 // --- GDI handles ---
 static HFONT hFontTitle, hFontHeading, hFontNormal, hFontSmall, hFontBold, hFontMono;
@@ -235,6 +245,7 @@ static const SidebarItem sidebarItems[] = {
     {"Loans",           SCR_ADMIN_LOANS,      true},
     {"Cash Inventory",  SCR_ADMIN_CASH,       true},
     {"Daily Report",    SCR_ADMIN_DAILY,      true},
+    {"Reactivation Req",SCR_ADMIN_REQUESTS,   true},
     {"",                SCR_LOGIN,            false},
     {"ATM Menu",        SCR_ATM_MENU,         false},
     {"ATM Balance",     SCR_ATM_BALANCE,      false},
@@ -267,8 +278,8 @@ static void DrawSidebar(HDC hdc, RECT rc, AppState& s) {
     int yStart = HEADER_H + 42;
     int itemH = 38;
 
-    int startIdx = s.isAdmin ? 0 : 14;
-    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
+    int startIdx = s.isAdmin ? 0 : 15;
+    int count = s.isAdmin ? 14 : (NUM_SIDEBAR_ITEMS - 15);
 
     for (int i = 0; i < count; i++) {
         int idx = startIdx + i;
@@ -313,8 +324,8 @@ static int SidebarHitTest(LPARAM lp, AppState& s) {
     int yStart = HEADER_H + 42;
     int itemH = 38;
 
-    int startIdx = s.isAdmin ? 0 : 14;
-    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
+    int startIdx = s.isAdmin ? 0 : 15;
+    int count = s.isAdmin ? 14 : (NUM_SIDEBAR_ITEMS - 15);
 
     for (int i = 0; i < count; i++) {
         int y = yStart + i * itemH;
@@ -323,6 +334,41 @@ static int SidebarHitTest(LPARAM lp, AppState& s) {
         }
     }
     return -1;
+}
+
+static void DrawBellIcon(HDC hdc, int x, int y, COLORREF color) {
+    HPEN pen = CreatePen(PS_SOLID, 2, color);
+    HBRUSH brush = CreateSolidBrush(color);
+    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+    HBRUSH oldBrush = (HBRUSH)SelectObject(hdc, brush);
+
+    int cx = x + 10;
+    int cy = y + 10;
+
+    // Top handle loop
+    HBRUSH nullBr = (HBRUSH)GetStockObject(NULL_BRUSH);
+    SelectObject(hdc, nullBr);
+    Ellipse(hdc, cx - 2, cy - 9, cx + 2, cy - 5);
+    SelectObject(hdc, brush);
+
+    // Main Bell body polygon
+    POINT pts[6] = {
+        {cx - 3, cy - 5},
+        {cx + 3, cy - 5},
+        {cx + 6, cy + 2},
+        {cx + 8, cy + 5},
+        {cx - 8, cy + 5},
+        {cx - 6, cy + 2}
+    };
+    Polygon(hdc, pts, 6);
+
+    // Bottom clapper ball
+    Ellipse(hdc, cx - 2, cy + 5, cx + 2, cy + 9);
+
+    SelectObject(hdc, oldPen);
+    SelectObject(hdc, oldBrush);
+    DeleteObject(pen);
+    DeleteObject(brush);
 }
 
 static void DrawHeader(HDC hdc, RECT rc, AppState& s) {
@@ -535,14 +581,14 @@ static void PaintATMLoginScreen(HDC hdc, RECT rc) {
     int cx = rc.right / 2;
     int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
 
-    DrawCard(hdc, cx - 220, cy - 140, 440, 280);
-    TxtCenter(hdc, "ATM Customer Login", cx - 220, cy - 115, 440, 32, hFontTitle, Primary);
-    TxtCenter(hdc, "Enter your account number and PIN to access ATM services", cx - 220, cy - 80, 440, 20, hFontSmall, TextLight);
+    DrawCard(hdc, cx - 220, cy - 150, 440, 330);
+    TxtCenter(hdc, "ATM Customer Login", cx - 220, cy - 125, 440, 32, hFontTitle, Primary);
+    TxtCenter(hdc, "Enter your account number and PIN to access ATM services", cx - 220, cy - 90, 440, 20, hFontSmall, TextLight);
 
     HPEN linePen = CreatePen(PS_SOLID, 1, CardBorder);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, cx - 170, cy - 50, NULL);
-    LineTo(hdc, cx + 170, cy - 50);
+    MoveToEx(hdc, cx - 170, cy - 60, NULL);
+    LineTo(hdc, cx + 170, cy - 60);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 }
@@ -1126,6 +1172,112 @@ static void PaintAdminUnlock(HDC hdc, RECT rc) {
         RGB(30, 64, 175));
 }
 
+// ============================
+// CONTACT ADMIN SCREEN (ATM side)
+// ============================
+static void PaintContactAdmin(HDC hdc, RECT rc) {
+    int sx = SIDEBAR_W + 35;
+    int sy = HEADER_H + 25;
+    int cw = min(560, (int)(rc.right - SIDEBAR_W - 60));
+
+    // Title
+    Txt(hdc, "Request Account Reactivation", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Fill in your details and reason — the admin will review your request", sx, sy + 28, hFontSmall, TextLight);
+    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
+    HPEN old = (HPEN)SelectObject(hdc, linePen);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 320, sy + 46);
+    SelectObject(hdc, old);
+    DeleteObject(linePen);
+
+    int cardY = sy + 58;
+    DrawCard(hdc, sx, cardY, cw, 285);
+
+    // Field labels inside card
+    Txt(hdc, "Account Number:", sx + 30, cardY + 24, hFontBold, Text);
+    Txt(hdc, "Full Name:",      sx + 30, cardY + 74, hFontBold, Text);
+    Txt(hdc, "CNIC:",           sx + 30, cardY + 124, hFontBold, Text);
+    Txt(hdc, "Reason:",         sx + 30, cardY + 174, hFontBold, Text);
+
+    // Info note below card
+    HBRUSH noteBg = CreateSolidBrush(RGB(239, 246, 255));
+    HPEN notePen = CreatePen(PS_SOLID, 1, RGB(147, 197, 253));
+    RoundRect2(hdc, sx, cardY + 300, cw, 44, 8, noteBg, notePen);
+    DeleteObject(noteBg);
+    DeleteObject(notePen);
+    Txt(hdc, "Your request will be reviewed by the bank administrator.", sx + 15, cardY + 312, hFontSmall, RGB(30, 64, 175));
+}
+
+// ============================
+// ADMIN REACTIVATION REQUESTS SCREEN
+// ============================
+static void PaintAdminRequests(HDC hdc, RECT rc) {
+    int sx = SIDEBAR_W + 25;
+    int sy = HEADER_H + 25;
+    int cw = rc.right - SIDEBAR_W - 50;
+    int ch = rc.bottom - HEADER_H - STATUS_H - 50;
+
+    Txt(hdc, "Reactivation Requests", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Review and approve customer account reactivation requests", sx, sy + 28, hFontSmall, TextLight);
+    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
+    HPEN old = (HPEN)SelectObject(hdc, linePen);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 270, sy + 46);
+    SelectObject(hdc, old);
+    DeleteObject(linePen);
+
+    DrawCard(hdc, sx, sy + 58, cw, ch - 68);
+
+    // Table header
+    RECT tblHdr = {sx + 10, sy + 63, sx + cw - 10, sy + 93};
+    HBRUSH tblHdrBr = CreateSolidBrush(RGB(240, 243, 248));
+    FillRect(hdc, &tblHdr, tblHdrBr);
+    DeleteObject(tblHdrBr);
+
+    int colX[] = {sx + 15, sx + 65, sx + 180, sx + 320, sx + 435, sx + 550, sx + 665};
+    const char* colH[] = {"#", "Acct", "Name", "CNIC", "Date", "Status", "Actions"};
+    for (int i = 0; i < 7; i++)
+        Txt(hdc, colH[i], colX[i], sy + 70, hFontBold, TextLight);
+
+    int rowY = sy + 100;
+    int shown = min((int)g.reactivationRequests.size(), 14);
+    for (int i = (int)g.reactivationRequests.size() - 1; i >= (int)g.reactivationRequests.size() - shown && i >= 0; i--) {
+        if (rowY > sy + ch - 30) break;
+        auto& req = g.reactivationRequests[i];
+
+        // Row separator
+        HPEN rowPen = CreatePen(PS_SOLID, 1, RGB(241, 245, 249));
+        HPEN rOld = (HPEN)SelectObject(hdc, rowPen);
+        MoveToEx(hdc, sx + 10, rowY + 24, NULL);
+        LineTo(hdc, sx + cw - 10, rowY + 24);
+        SelectObject(hdc, rOld);
+        DeleteObject(rowPen);
+
+        Txt(hdc, to_string(req.requestId).c_str(), colX[0], rowY, hFontMono, Text);
+        Txt(hdc, to_string(req.accountNo).c_str(), colX[1], rowY, hFontNormal, Text);
+
+        // Truncate name if too long
+        string dispName = req.name.length() > 14 ? req.name.substr(0, 13) + "." : req.name;
+        Txt(hdc, dispName.c_str(), colX[2], rowY, hFontNormal, Text);
+        Txt(hdc, req.cnic.c_str(), colX[3], rowY, hFontSmall, Text);
+
+        string dispDate = req.dateTime.length() >= 10 ? req.dateTime.substr(0, 10) : req.dateTime;
+        Txt(hdc, dispDate.c_str(), colX[4], rowY, hFontSmall, TextLight);
+
+        // Color-coded status
+        COLORREF stClr = (req.status == "pending") ? RGB(217, 119, 6) :
+                         (req.status == "approved") ? Success : Error;
+        Txt(hdc, req.status.c_str(), colX[5], rowY, hFontBold, stClr);
+
+        rowY += 32;
+    }
+
+    // Empty state
+    if (g.reactivationRequests.empty()) {
+        Txt(hdc, "No reactivation requests found.", sx + 25, sy + 105, hFontNormal, TextLight);
+    }
+}
+
 static void PaintAdminTxns(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 25;
     int sy = HEADER_H + 25;
@@ -1493,6 +1645,8 @@ static void PaintScreen(HDC hdc, RECT rc) {
         case SCR_ATM_CHANGEPIN: PaintATMChangePIN(hdc, rc); break;
         case SCR_ATM_INFO: PaintATMInfo(hdc, rc); break;
         case SCR_OTP: PaintOTPScreen(hdc, rc); break;
+        case SCR_CONTACT_ADMIN: PaintContactAdmin(hdc, rc); break;
+        case SCR_ADMIN_REQUESTS: PaintAdminRequests(hdc, rc); break;
     }
 
     DrawStatus(hdc, rc, g);
@@ -1512,12 +1666,13 @@ static void CreateScreenControls() {
     int sy = HEADER_H + 25;
     int edH = 34;
 
-    // Header buttons (Logout / Backup)
+    // Header buttons (Logout / Backup + Notification Bell)
     if (g.isAdmin && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_LOGIN) {
-        MakeBtn(BTN_DO_BACKUP, "Backup Data", rc.right - 245, 14, 115, 36, Primary);
-        MakeBtn(BTN_LOGOUT,    "Logout",      rc.right - 115, 14, 95,  36, Error);
+        MakeBtn(BTN_NOTIF_REQUESTS, "",            rc.right - 280, 14, 42, 36, RGB(30,41,59));
+        MakeBtn(BTN_DO_BACKUP,     "Backup Data", rc.right - 225, 14, 115, 36, Primary);
+        MakeBtn(BTN_LOGOUT,        "Logout",      rc.right - 100, 14, 85,  36, Error);
     } else if (!g.isAdmin && g.currentAccIdx >= 0 && g.screen != SCR_ATM_LOGIN && g.screen != SCR_LOGIN) {
-        MakeBtn(BTN_LOGOUT,    "Logout",      rc.right - 115, 14, 95,  36, Error);
+        MakeBtn(BTN_LOGOUT,        "Logout",      rc.right - 100, 14, 85,  36, Error);
     }
 
     switch (g.screen) {
@@ -1531,12 +1686,13 @@ static void CreateScreenControls() {
     case SCR_ATM_LOGIN: {
         int cx = rc.right / 2;
         int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
-        MakeLabel("Account Number:", cx - 170, cy - 25, 140, 24, 1);
-        MakeEdit(EDT_ACCNO,           cx - 20,  cy - 30, 190, 34);
-        MakeLabel("PIN:",            cx - 170, cy + 25, 140, 24, 1);
-        MakeEdit(EDT_PIN,             cx - 20,  cy + 20, 190, 34, true);
-        MakeBtn(BTN_DO_LOGIN,        "Login",  cx - 170, cy + 80, 160, 42, Success);
-        MakeBtn(BTN_BACK,            "Back",   cx + 10,  cy + 80, 160, 42, RGB(100, 116, 139));
+        MakeLabel("Account Number:", cx - 170, cy - 35, 140, 24, 1);
+        MakeEdit(EDT_ACCNO,           cx - 20,  cy - 40, 190, 34);
+        MakeLabel("PIN:",            cx - 170, cy + 15, 140, 24, 1);
+        MakeEdit(EDT_PIN,             cx - 20,  cy + 10, 190, 34, true);
+        MakeBtn(BTN_DO_LOGIN,        "Login",  cx - 170, cy + 65, 160, 40, Success);
+        MakeBtn(BTN_BACK,            "Back",   cx + 10,  cy + 65, 160, 40, RGB(100, 116, 139));
+        MakeBtn(BTN_CONTACT_ADMIN_SCREEN, "Account Blocked? Contact Admin", cx - 170, cy + 120, 340, 36, Warning);
         break;
     }
     case SCR_ADMIN_LOGIN: {
@@ -1671,6 +1827,37 @@ static void CreateScreenControls() {
         MakeBtn(BTN_BACK,   "Cancel",     cardX + 280, cardY + 212, 110, 40, RGB(100, 116, 139));
         break;
     }
+    case SCR_CONTACT_ADMIN: {
+        int cardY = sy + 58;
+        int edtX  = sx + 190;
+        int edtW  = min(560, (int)(rc.right - SIDEBAR_W - 60)) - 220;
+        MakeEdit(EDT_ACCNO, edtX, cardY + 20,  edtW, 34);
+        MakeEdit(EDT_NAME,  edtX, cardY + 70,  edtW, 34);
+        MakeEdit(EDT_CNIC,  edtX, cardY + 120, edtW, 34);
+        MakeEdit(EDT_REASON,edtX, cardY + 170, edtW, 34);
+        MakeBtn(BTN_DO_CONTACT_ADMIN, "Submit Request", edtX,       cardY + 225, 150, 40, Primary);
+        MakeBtn(BTN_BACK,             "Back",           edtX + 165, cardY + 225, 100, 40, RGB(100,116,139));
+        break;
+    }
+    case SCR_ADMIN_REQUESTS: {
+        int colX[] = {sx + 15, sx + 65, sx + 180, sx + 320, sx + 435, sx + 550, sx + 665};
+        int rowY = sy + 100;
+        int shown = min((int)g.reactivationRequests.size(), 14);
+        int startI = (int)g.reactivationRequests.size() - 1;
+        int endI   = (int)g.reactivationRequests.size() - shown;
+        for (int i = startI; i >= endI && i >= 0; i--) {
+            if (rowY > rc.bottom - STATUS_H - 50) break;
+            auto& req = g.reactivationRequests[i];
+            if (req.status == "pending") {
+                int btnApprId = BTN_DYNAMIC_APPROVE_BASE + i;
+                int btnRejId  = BTN_DYNAMIC_REJECT_BASE + i;
+                MakeBtn(btnApprId, "Approve", colX[6], rowY - 4, 70, 24, Success);
+                MakeBtn(btnRejId,  "Reject",  colX[6] + 76, rowY - 4, 60, 24, Error);
+            }
+            rowY += 32;
+        }
+        break;
+    }
     }
 
     InvalidateRect(gHwnd, NULL, TRUE);
@@ -1695,6 +1882,59 @@ static void HandleCommand(int id) {
         return;
     }
 
+    // Handle the "Contact Admin" navigation button (appears on ATM login for locked/frozen)
+    if (id == BTN_CONTACT_ADMIN_SCREEN) {
+        GoToScreen(SCR_CONTACT_ADMIN);
+        return;
+    }
+
+    // Handle admin notification bell — navigate to reactivation requests
+    if (id == BTN_NOTIF_REQUESTS) {
+        loadReactivationRequests(g.reactivationRequests);
+        GoToScreen(SCR_ADMIN_REQUESTS);
+        return;
+    }
+
+    // Handle dynamic approve buttons
+    if (id >= BTN_DYNAMIC_APPROVE_BASE && id < BTN_DYNAMIC_APPROVE_BASE + 1000) {
+        int reqIdx = id - BTN_DYNAMIC_APPROVE_BASE;
+        loadReactivationRequests(g.reactivationRequests);
+        if (reqIdx >= 0 && reqIdx < (int)g.reactivationRequests.size()) {
+            auto& req = g.reactivationRequests[reqIdx];
+            req.status = "approved";
+            // Auto-unlock the referenced account
+            loadAccounts(g.accounts);
+            int aIdx = findAccountIndex(req.accountNo, g.accounts);
+            if (aIdx >= 0) {
+                g.accounts[aIdx].status = "active";
+                g.accounts[aIdx].pinAttempts = 0;
+                saveAccounts(g.accounts);
+            }
+            saveReactivationRequests(g.reactivationRequests);
+            logAudit("Reactivation Approved", "Request " + to_string(req.requestId) +
+                     " for account " + to_string(req.accountNo) + " approved");
+            SetStatus("Request approved. Account " + to_string(req.accountNo) + " is now active.", 1);
+            SpeakText("Reactivation request approved. Account is now active.");
+            GoToScreen(SCR_ADMIN_REQUESTS);
+        }
+        return;
+    }
+
+    // Handle dynamic reject buttons
+    if (id >= BTN_DYNAMIC_REJECT_BASE && id < BTN_DYNAMIC_REJECT_BASE + 1000) {
+        int reqIdx = id - BTN_DYNAMIC_REJECT_BASE;
+        loadReactivationRequests(g.reactivationRequests);
+        if (reqIdx >= 0 && reqIdx < (int)g.reactivationRequests.size()) {
+            g.reactivationRequests[reqIdx].status = "rejected";
+            saveReactivationRequests(g.reactivationRequests);
+            logAudit("Reactivation Rejected", "Request " + to_string(g.reactivationRequests[reqIdx].requestId) +
+                     " for account " + to_string(g.reactivationRequests[reqIdx].accountNo) + " rejected");
+            SetStatus("Request rejected.", 2);
+            GoToScreen(SCR_ADMIN_REQUESTS);
+        }
+        return;
+    }
+
     switch (id) {
     case BTN_DO_ADMIN_LOGIN:
         if (g.screen == SCR_LOGIN || g.screen == SCR_ATM_LOGIN) {
@@ -1708,6 +1948,7 @@ static void HandleCommand(int id) {
                 loadTransactions(g.transactions);
                 loadLoans(g.loans);
                 loadCashInventory(g.inventory);
+                loadReactivationRequests(g.reactivationRequests);
                 logAudit("Admin Login", "Administrator logged in");
                 SpeakText("Welcome to the admin panel.");
                 GoToScreen(SCR_ADMIN_DASH);
@@ -1723,6 +1964,8 @@ static void HandleCommand(int id) {
             GoToScreen(SCR_ATM_LOGIN);
             break;
         }
+        RECT rc;
+        GetClientRect(gHwnd, &rc);
         string accStr = GetEditText(EDT_ACCNO);
         string pin = GetEditText(EDT_PIN);
         if (accStr.empty() || pin.empty()) {
@@ -1737,11 +1980,13 @@ static void HandleCommand(int id) {
             break;
         }
         if (g.accounts[idx].status == "frozen") {
-            SetStatus("Account is frozen. Contact admin.", 2);
+            g.pendingReactivationAccNo = accNo;
+            SetStatus("Account is frozen. Click 'Account Blocked? Contact Admin' below.", 2);
             break;
         }
         if (g.accounts[idx].status == "locked") {
-            SetStatus("Account is locked. Too many failed attempts.", 2);
+            g.pendingReactivationAccNo = accNo;
+            SetStatus("Account is locked. Click 'Account Blocked? Contact Admin' below.", 2);
             break;
         }
         string stored = decodePIN(g.accounts[idx].pinHash);
@@ -1877,6 +2122,47 @@ static void HandleCommand(int id) {
         logAudit("Account Unlocked", "Account " + to_string(accNo) + " unlocked, PIN reset");
         SetStatus("Account unlocked, PIN attempts reset", 1);
         SpeakText("Account " + to_string(accNo) + " has been unlocked.");
+        break;
+    }
+
+    case BTN_DO_CONTACT_ADMIN: {
+        string accStr  = GetEditText(EDT_ACCNO);
+        string name    = GetEditText(EDT_NAME);
+        string cnic    = GetEditText(EDT_CNIC);
+        string reason  = GetEditText(EDT_REASON);
+
+        if (accStr.empty())  { SetStatus("Please enter your account number", 2); break; }
+        if (name.empty())    { SetStatus("Please enter your full name", 2); break; }
+        if (cnic.empty())    { SetStatus("Please enter your CNIC", 2); break; }
+        if (reason.empty())  { SetStatus("Please describe the reason for reactivation", 2); break; }
+
+        int accNo = atoi(accStr.c_str());
+        if (accNo <= 0) { SetStatus("Invalid account number", 2); break; }
+
+        // Verify account exists
+        loadAccounts(g.accounts);
+        int accIdx = findAccountIndex(accNo, g.accounts);
+        if (accIdx < 0) { SetStatus("Account not found. Check your account number.", 2); break; }
+
+        // Build request and save
+        loadReactivationRequests(g.reactivationRequests);
+        ReactivationRequest req;
+        req.requestId = (int)g.reactivationRequests.size() + 1;
+        req.accountNo = accNo;
+        req.name      = name;
+        req.cnic      = cnic;
+        req.reason    = reason;
+        req.dateTime  = getCurrentDateTimeStr();
+        req.status    = "pending";
+
+        appendReactivationRequest(req);
+        g.reactivationRequests.push_back(req);
+
+        logAudit("Reactivation Request", "Account " + to_string(accNo) +
+                 " submitted reactivation request #" + to_string(req.requestId));
+        SetStatus("Request submitted! The admin will review it shortly.", 1);
+        SpeakText("Your reactivation request has been submitted. Please wait for admin approval.");
+        GoToScreen(SCR_ATM_LOGIN);
         break;
     }
 
@@ -2170,6 +2456,11 @@ static void HandleCommand(int id) {
 static void GoToScreen(Screen scr) {
     g.screen = scr;
     g.statusMsg.clear();
+    // Keep reactivation request list fresh for the notification badge
+    // and reload fully when admin opens the requests screen
+    if (g.isAdmin && scr != SCR_LOGIN && scr != SCR_ATM_LOGIN) {
+        loadReactivationRequests(g.reactivationRequests);
+    }
     CreateScreenControls();
     RefreshScreen();
     string guide = ScreenGuide(scr);
@@ -2185,6 +2476,58 @@ static void DrawBtnRaw(DRAWITEMSTRUCT* di, int customColor) {
     bool pressed = di->itemState & ODS_SELECTED;
     bool focused = di->itemState & ODS_FOCUS;
     bool hovered = (GetProp(di->hwndItem, "HOVER") != NULL);
+
+    int id = GetWindowLong(di->hwndItem, GWL_ID);
+
+    // Custom notification bell button rendering
+    if (id == BTN_NOTIF_REQUESTS) {
+        COLORREF bgClr = RGB(30, 41, 59);
+        if (pressed) {
+            bgClr = RGB(15, 23, 42);
+        } else if (hovered) {
+            bgClr = RGB(51, 65, 85);
+        }
+
+        HBRUSH br = CreateSolidBrush(bgClr);
+        HPEN pen = CreatePen(PS_SOLID, 1, hovered ? RGB(99, 102, 241) : RGB(51, 65, 85));
+        HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+        HBRUSH oldBr = (HBRUSH)SelectObject(hdc, br);
+        RoundRect(hdc, rc.left, rc.top, rc.right, rc.bottom, 12, 12);
+        SelectObject(hdc, oldPen);
+        SelectObject(hdc, oldBr);
+        DeleteObject(br);
+        DeleteObject(pen);
+
+        int pendingCount = 0;
+        for (auto& req : g.reactivationRequests)
+            if (req.status == "pending") pendingCount++;
+
+        COLORREF bellClr = (pendingCount > 0) ? RGB(251, 191, 36) : (hovered ? RGB(255, 255, 255) : RGB(148, 163, 184));
+        DrawBellIcon(hdc, rc.left + 11, rc.top + 8, bellClr);
+
+        if (pendingCount > 0) {
+            int rx = rc.right - 15;
+            int ry = rc.top - 2;
+            HBRUSH badgeBr = CreateSolidBrush(RGB(239, 68, 68));
+            HPEN badgePen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
+            HPEN oldP2 = (HPEN)SelectObject(hdc, badgePen);
+            HBRUSH oldB2 = (HBRUSH)SelectObject(hdc, badgeBr);
+            Ellipse(hdc, rx, ry, rx + 16, ry + 16);
+            SelectObject(hdc, oldP2);
+            SelectObject(hdc, oldB2);
+            DeleteObject(badgeBr);
+            DeleteObject(badgePen);
+
+            string countStr = pendingCount > 9 ? "9+" : to_string(pendingCount);
+            SetBkMode(hdc, TRANSPARENT);
+            SetTextColor(hdc, RGB(255, 255, 255));
+            HFONT oldFont = (HFONT)SelectObject(hdc, hFontSmall);
+            RECT bRc = {rx, ry, rx + 16, ry + 16};
+            DrawText(hdc, countStr.c_str(), -1, &bRc, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
+            SelectObject(hdc, oldFont);
+        }
+        return;
+    }
 
     COLORREF bgClr = (customColor != 0) ? (COLORREF)customColor : Secondary;
     if (pressed) {
@@ -2223,7 +2566,8 @@ static void DrawBtnRaw(DRAWITEMSTRUCT* di, int customColor) {
     DrawText(hdc, txt, -1, &txtRc, DT_CENTER|DT_VCENTER|DT_SINGLELINE);
     SelectObject(hdc, oldFont);
 
-    if (focused) {
+    // Skip white dotted focus box for header buttons to keep clean modern look
+    if (focused && id != BTN_NOTIF_REQUESTS && id != BTN_DO_BACKUP && id != BTN_LOGOUT) {
         HPEN focusPen = CreatePen(PS_DOT, 1, RGB(255,255,255));
         HPEN oldFP = (HPEN)SelectObject(hdc, focusPen);
         HBRUSH oldFB = (HBRUSH)SelectObject(hdc, GetStockObject(NULL_BRUSH));

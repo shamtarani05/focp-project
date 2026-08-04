@@ -19,7 +19,9 @@ enum Screen {
     SCR_ATM_LOGIN, SCR_ATM_MENU, SCR_ATM_BALANCE, SCR_ATM_DEPOSIT,
     SCR_ATM_WITHDRAW, SCR_ATM_TRANSFER, SCR_ATM_MINISTATE,
     SCR_ATM_CHANGEPIN, SCR_ATM_INFO,
-    SCR_OTP
+    SCR_OTP,
+    SCR_CONTACT_ADMIN,
+    SCR_ADMIN_REQUESTS
 };
 
 struct AppState {
@@ -42,6 +44,12 @@ struct AppState {
 
     // Last search results
     int lastSearchAccNo;
+
+    // Pending reactivation request account (for contact admin flow)
+    int pendingReactivationAccNo;
+
+    // Reactivation requests
+    vector<ReactivationRequest> reactivationRequests;
 };
 
 #endif
