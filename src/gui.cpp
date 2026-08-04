@@ -390,8 +390,9 @@ static void DrawHeader(HDC hdc, RECT rc, AppState& s) {
     Txt(hdc, "Secure Banking Platform", 68, 38, hFontSmall, RGB(148,163,184));
 
     // Show current user/mode label (left-aligned after bank name)
-    const char* modeLabel = s.isAdmin ? "Admin Portal" :
-                            (s.currentAccIdx >= 0 ? "ATM Session" : "");
+    bool isPublicScreen = (s.screen == SCR_LOGIN || s.screen == SCR_ADMIN_LOGIN || s.screen == SCR_ATM_LOGIN || s.screen == SCR_CONTACT_ADMIN);
+    const char* modeLabel = (s.isAdmin && !isPublicScreen) ? "Admin Portal" :
+                            (!s.isAdmin && s.currentAccIdx >= 0 && !isPublicScreen ? "ATM Session" : "");
     if (modeLabel[0] != '\0') {
         HBRUSH modeBg = CreateSolidBrush(RGB(30,41,59));
         HPEN modePen = CreatePen(PS_SOLID, 1, RGB(51,65,85));
@@ -1667,11 +1668,12 @@ static void CreateScreenControls() {
     int edH = 34;
 
     // Header buttons (Logout / Backup + Notification Bell)
-    if (g.isAdmin && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_LOGIN) {
+    bool isPublicScreen = (g.screen == SCR_LOGIN || g.screen == SCR_ADMIN_LOGIN || g.screen == SCR_ATM_LOGIN || g.screen == SCR_CONTACT_ADMIN);
+    if (g.isAdmin && !isPublicScreen) {
         MakeBtn(BTN_NOTIF_REQUESTS, "",            rc.right - 280, 14, 42, 36, RGB(30,41,59));
         MakeBtn(BTN_DO_BACKUP,     "Backup Data", rc.right - 225, 14, 115, 36, Primary);
         MakeBtn(BTN_LOGOUT,        "Logout",      rc.right - 100, 14, 85,  36, Error);
-    } else if (!g.isAdmin && g.currentAccIdx >= 0 && g.screen != SCR_ATM_LOGIN && g.screen != SCR_LOGIN) {
+    } else if (!g.isAdmin && g.currentAccIdx >= 0 && !isPublicScreen) {
         MakeBtn(BTN_LOGOUT,        "Logout",      rc.right - 100, 14, 85,  36, Error);
     }
 
