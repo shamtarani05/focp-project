@@ -1183,7 +1183,7 @@ static void PaintContactAdmin(HDC hdc, RECT rc) {
 
     // Title
     Txt(hdc, "Request Account Reactivation", sx, sy, hFontHeading, Primary);
-    Txt(hdc, "Fill in your details and reason — the admin will review your request", sx, sy + 28, hFontSmall, TextLight);
+    Txt(hdc, "Fill in your details and reason - the admin will review your request", sx, sy + 28, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
     MoveToEx(hdc, sx, sy + 46, NULL);
@@ -2025,16 +2025,22 @@ static void HandleCommand(int id) {
         string pin = GetEditText(EDT_PIN);
         string pin2 = GetEditText(EDT_CONFIRMPIN);
 
-        if (!isValidName(name)) { SetStatus("Invalid name (letters and spaces only)", 2); break; }
+        if (!isValidName(name)) { SetStatus("Invalid name (letters and spaces only, min 2 chars)", 2); break; }
         if (!isValidCNIC(cnic)) { SetStatus("Invalid CNIC format (XXXXX-XXXXXXX-X)", 2); break; }
         if (!isValidAccountType(type)) { SetStatus("Type must be 'savings' or 'current'", 2); break; }
-        if (balStr.empty()) { SetStatus("Enter initial balance", 2); break; }
+        if (balStr.empty() || !isNumericDecimal(balStr)) { SetStatus("Enter a valid initial deposit amount", 2); break; }
         double bal = atof(balStr.c_str());
-        if (!isPositiveAmount(bal)) { SetStatus("Balance must be positive", 2); break; }
-        if (!isValidPIN(pin)) { SetStatus("PIN must be 4 digits", 2); break; }
-        if (pin != pin2) { SetStatus("PINs do not match", 2); break; }
+        if (bal < 500.0) { SetStatus("Minimum initial deposit is Rs. 500.00", 2); break; }
+        if (bal > 10000000.0) { SetStatus("Initial deposit exceeds maximum allowed limit (Rs. 10,000,000)", 2); break; }
+        if (!isValidPIN(pin)) { SetStatus("PIN must be exactly 4 numeric digits", 2); break; }
+        if (pin != pin2) { SetStatus("PIN confirmation does not match", 2); break; }
 
         loadAccounts(g.accounts);
+        if (findAccountByCNIC(cnic, g.accounts) >= 0) {
+            SetStatus("An account with this CNIC already exists!", 2);
+            break;
+        }
+
         Account acc;
         acc.accountNo = getNextAccountNo(g.accounts);
         acc.name = name;
@@ -2062,7 +2068,7 @@ static void HandleCommand(int id) {
 
     case BTN_DO_SEARCH: {
         string accStr = GetEditText(EDT_SEARCH);
-        if (accStr.empty()) { SetStatus("Enter account number", 2); break; }
+        if (accStr.empty() || !isNumeric(accStr)) { SetStatus("Enter a valid numeric account number", 2); break; }
         int accNo = atoi(accStr.c_str());
         loadAccounts(g.accounts);
         int idx = findAccountIndex(accNo, g.accounts);
@@ -2083,11 +2089,12 @@ static void HandleCommand(int id) {
 
     case BTN_DO_FREEZE: {
         string accStr = GetEditText(EDT_SEARCH);
-        if (accStr.empty()) { SetStatus("Enter account number", 2); break; }
+        if (accStr.empty() || !isNumeric(accStr)) { SetStatus("Enter a valid numeric account number", 2); break; }
         int accNo = atoi(accStr.c_str());
         loadAccounts(g.accounts);
         int idx = findAccountIndex(accNo, g.accounts);
         if (idx < 0) { SetStatus("Account not found", 2); break; }
+        if (g.accounts[idx].status == "frozen") { SetStatus("Account is already frozen", 2); break; }
         g.accounts[idx].status = "frozen";
         saveAccounts(g.accounts);
         logAudit("Account Frozen", "Account " + to_string(accNo) + " frozen");
@@ -2098,11 +2105,12 @@ static void HandleCommand(int id) {
 
     case BTN_DO_UNFREEZE: {
         string accStr = GetEditText(EDT_SEARCH);
-        if (accStr.empty()) { SetStatus("Enter account number", 2); break; }
+        if (accStr.empty() || !isNumeric(accStr)) { SetStatus("Enter a valid numeric account number", 2); break; }
         int accNo = atoi(accStr.c_str());
         loadAccounts(g.accounts);
         int idx = findAccountIndex(accNo, g.accounts);
         if (idx < 0) { SetStatus("Account not found", 2); break; }
+        if (g.accounts[idx].status == "active") { SetStatus("Account is already active", 2); break; }
         g.accounts[idx].status = "active";
         saveAccounts(g.accounts);
         logAudit("Account Unfrozen", "Account " + to_string(accNo) + " unfrozen");
@@ -2113,11 +2121,15 @@ static void HandleCommand(int id) {
 
     case BTN_DO_UNLOCK: {
         string accStr = GetEditText(EDT_SEARCH);
-        if (accStr.empty()) { SetStatus("Enter account number", 2); break; }
+        if (accStr.empty() || !isNumeric(accStr)) { SetStatus("Enter a valid numeric account number", 2); break; }
         int accNo = atoi(accStr.c_str());
         loadAccounts(g.accounts);
         int idx = findAccountIndex(accNo, g.accounts);
         if (idx < 0) { SetStatus("Account not found", 2); break; }
+        if (g.accounts[idx].status == "active" && g.accounts[idx].pinAttempts == 0) {
+            SetStatus("Account is already active and unlocked", 1);
+            break;
+        }
         g.accounts[idx].status = "active";
         g.accounts[idx].pinAttempts = 0;
         saveAccounts(g.accounts);
@@ -2133,25 +2145,51 @@ static void HandleCommand(int id) {
         string cnic    = GetEditText(EDT_CNIC);
         string reason  = GetEditText(EDT_REASON);
 
-        if (accStr.empty())  { SetStatus("Please enter your account number", 2); break; }
-        if (name.empty())    { SetStatus("Please enter your full name", 2); break; }
-        if (cnic.empty())    { SetStatus("Please enter your CNIC", 2); break; }
-        if (reason.empty())  { SetStatus("Please describe the reason for reactivation", 2); break; }
+        if (accStr.empty() || !isNumeric(accStr)) { SetStatus("Please enter a valid numeric account number", 2); break; }
+        if (!isValidName(name))   { SetStatus("Please enter your full name (letters and spaces only)", 2); break; }
+        if (!isValidCNIC(cnic))   { SetStatus("Please enter a valid CNIC (XXXXX-XXXXXXX-X)", 2); break; }
+        if (reason.length() < 5)  { SetStatus("Please describe the reason for reactivation (at least 5 characters)", 2); break; }
 
         int accNo = atoi(accStr.c_str());
         if (accNo <= 0) { SetStatus("Invalid account number", 2); break; }
 
-        // Verify account exists
         loadAccounts(g.accounts);
         int accIdx = findAccountIndex(accNo, g.accounts);
         if (accIdx < 0) { SetStatus("Account not found. Check your account number.", 2); break; }
 
-        // Build request and save
+        // Verify CNIC matches registered account details
+        string cleanedInputCnic, cleanedRegCnic;
+        for (char c : cnic) if (c != '-' && c != ' ') cleanedInputCnic += c;
+        for (char c : g.accounts[accIdx].cnic) if (c != '-' && c != ' ') cleanedRegCnic += c;
+        if (cleanedInputCnic != cleanedRegCnic) {
+            SetStatus("CNIC does not match the registered account details!", 2);
+            break;
+        }
+
+        // Verify Full Name matches registered account details (case-insensitive)
+        string lowerInputName = name, lowerRegName = g.accounts[accIdx].name;
+        for (char& c : lowerInputName) c = (char)tolower(c);
+        for (char& c : lowerRegName) c = (char)tolower(c);
+        if (lowerInputName != lowerRegName && lowerRegName.find(lowerInputName) == string::npos && lowerInputName.find(lowerRegName) == string::npos) {
+            SetStatus("Full Name does not match the registered account holder!", 2);
+            break;
+        }
+
+        if (g.accounts[accIdx].status == "active") {
+            SetStatus("This account is already active!", 1);
+            break;
+        }
+
         loadReactivationRequests(g.reactivationRequests);
+        if (hasPendingReactivationRequest(accNo, g.reactivationRequests)) {
+            SetStatus("A reactivation request for this account is already pending review.", 2);
+            break;
+        }
+
         ReactivationRequest req;
         req.requestId = (int)g.reactivationRequests.size() + 1;
         req.accountNo = accNo;
-        req.name      = name;
+        req.name      = g.accounts[accIdx].name; // store official account name
         req.cnic      = cnic;
         req.reason    = reason;
         req.dateTime  = getCurrentDateTimeStr();
@@ -2172,12 +2210,19 @@ static void HandleCommand(int id) {
         string accStr = GetEditText(EDT_ACCNO);
         string amtStr = GetEditText(EDT_AMT);
         if (accStr.empty() || amtStr.empty()) { SetStatus("Fill in all fields", 2); break; }
+        if (!isNumeric(accStr)) { SetStatus("Enter a valid numeric account number", 2); break; }
+        if (!isNumericDecimal(amtStr)) { SetStatus("Enter a valid deposit amount", 2); break; }
+
         int accNo = atoi(accStr.c_str());
         double amt = atof(amtStr.c_str());
-        if (!isValidAmount(amt)) { SetStatus("Invalid amount", 2); break; }
+        if (!isValidAmount(amt)) { SetStatus("Deposit amount must be positive", 2); break; }
+        if (amt > 1000000.0) { SetStatus("Maximum single deposit limit is Rs. 1,000,000", 2); break; }
+
         loadAccounts(g.accounts);
         int idx = findAccountIndex(accNo, g.accounts);
         if (idx < 0) { SetStatus("Account not found", 2); break; }
+        if (g.accounts[idx].status != "active") { SetStatus("Account is frozen or locked. Cannot deposit.", 2); break; }
+
         g.accounts[idx].balance += amt;
         saveAccounts(g.accounts);
 
@@ -2208,19 +2253,36 @@ static void HandleCommand(int id) {
             break;
         }
         string amtStr = GetEditText(EDT_AMT);
-        if (amtStr.empty()) { SetStatus("Enter amount", 2); break; }
+        if (amtStr.empty() || !isNumericDecimal(amtStr)) { SetStatus("Enter a valid withdrawal amount", 2); break; }
         double amt = atof(amtStr.c_str());
-        if (!isValidAmount(amt)) { SetStatus("Invalid amount", 2); break; }
+        if (!isValidAmount(amt)) { SetStatus("Withdrawal amount must be positive", 2); break; }
+        if (!isMultipleOf100(amt)) { SetStatus("Withdrawal amount must be a multiple of Rs. 100", 2); break; }
+        if (amt > 100000.0) { SetStatus("Maximum single withdrawal limit is Rs. 100,000", 2); break; }
+
         auto& acc = g.accounts[g.currentAccIdx];
-        if (acc.balance < amt) { SetStatus("Insufficient balance", 2); break; }
+        if (acc.status != "active") { SetStatus("Account is not active", 2); break; }
+        if (acc.balance < amt) { SetStatus("Insufficient account balance", 2); break; }
+
+        resetDailyWithdrawals(g.accounts);
         if (acc.dailyWithdrawn + amt > DAILY_WITHDRAWAL_LIMIT) {
             SetStatus("Exceeds daily withdrawal limit (Rs. 50,000)", 2);
             break;
         }
-        if (!dispenseCash(g.inventory, amt)) {
-            SetStatus("ATM has insufficient cash", 2);
+
+        loadCashInventory(g.inventory);
+        double totalAtmCash = getTotalCashInATM(g.inventory);
+        if (totalAtmCash < amt) {
+            stringstream ss;
+            ss << "ATM cash short. Total available: Rs. " << fixed << setprecision(0) << totalAtmCash;
+            SetStatus(ss.str(), 2);
             break;
         }
+
+        if (!dispenseCash(g.inventory, amt)) {
+            SetStatus("ATM cannot dispense exact note combination for this amount", 2);
+            break;
+        }
+
         acc.balance -= amt;
         acc.dailyWithdrawn += amt;
         saveAccounts(g.accounts);
@@ -2254,14 +2316,21 @@ static void HandleCommand(int id) {
         string targetStr = GetEditText(EDT_TRANSFER_TARGET);
         string amtStr = GetEditText(EDT_TRANSFER_AMT);
         if (targetStr.empty() || amtStr.empty()) { SetStatus("Fill in all fields", 2); break; }
+        if (!isNumeric(targetStr)) { SetStatus("Enter a valid target account number", 2); break; }
+        if (!isNumericDecimal(amtStr)) { SetStatus("Enter a valid transfer amount", 2); break; }
+
         int targetAcc = atoi(targetStr.c_str());
         double amt = atof(amtStr.c_str());
-        if (!isValidAmount(amt)) { SetStatus("Invalid amount", 2); break; }
+        if (!isValidAmount(amt)) { SetStatus("Transfer amount must be positive", 2); break; }
+        if (amt > 1000000.0) { SetStatus("Maximum single transfer limit is Rs. 1,000,000", 2); break; }
+
         int senderIdx = g.currentAccIdx;
+        loadAccounts(g.accounts);
         int receiverIdx = findAccountIndex(targetAcc, g.accounts);
         if (receiverIdx < 0) { SetStatus("Target account not found", 2); break; }
-        if (senderIdx == receiverIdx) { SetStatus("Cannot transfer to same account", 2); break; }
-        if (g.accounts[senderIdx].balance < amt) { SetStatus("Insufficient balance", 2); break; }
+        if (senderIdx == receiverIdx) { SetStatus("Cannot transfer funds to your own account", 2); break; }
+        if (g.accounts[receiverIdx].status != "active") { SetStatus("Target account is frozen or locked", 2); break; }
+        if (g.accounts[senderIdx].balance < amt) { SetStatus("Insufficient account balance", 2); break; }
 
         if (amt >= OTP_THRESHOLD) {
             g.otpCode = generateOTP();
@@ -2282,7 +2351,7 @@ static void HandleCommand(int id) {
         txn.amount = amt;
         txn.dateTime = getCurrentDateTimeStr();
         txn.resultingBalance = g.accounts[senderIdx].balance;
-        txn.details = "Transfer to " + to_string(targetAcc);
+        txn.details = "Transfer to Account #" + to_string(targetAcc);
         g.transactions.push_back(txn);
         saveTransactions(g.transactions);
         generateReceipt(txn, g.accounts[senderIdx]);
@@ -2311,8 +2380,10 @@ static void HandleCommand(int id) {
         }
         string stored = decodePIN(g.accounts[g.currentAccIdx].pinHash);
         if (curPin != stored) { SetStatus("Current PIN is incorrect", 2); break; }
-        if (!isValidPIN(newPin)) { SetStatus("PIN must be 4 digits", 2); break; }
-        if (newPin != confPin) { SetStatus("New PINs do not match", 2); break; }
+        if (!isValidPIN(newPin)) { SetStatus("PIN must be exactly 4 numeric digits", 2); break; }
+        if (newPin == curPin) { SetStatus("New PIN cannot be identical to current PIN", 2); break; }
+        if (newPin != confPin) { SetStatus("New PIN confirmation does not match", 2); break; }
+
         g.accounts[g.currentAccIdx].pinHash = encodePIN(newPin);
         saveAccounts(g.accounts);
         logAudit("PIN Changed", "Account " + to_string(g.accounts[g.currentAccIdx].accountNo) + " PIN changed");
@@ -2331,9 +2402,9 @@ static void HandleCommand(int id) {
         string minS = GetEditText(EDT_SEARCH_TXN_MIN);
         string maxS = GetEditText(EDT_SEARCH_TXN_MAX);
 
-        int accNo = accStr.empty() ? -1 : atoi(accStr.c_str());
-        double minAmt = minS.empty() ? -1 : atof(minS.c_str());
-        double maxAmt = maxS.empty() ? -1 : atof(maxS.c_str());
+        int accNo = (accStr.empty() || !isNumeric(accStr)) ? -1 : atoi(accStr.c_str());
+        double minAmt = (minS.empty() || !isNumericDecimal(minS)) ? -1 : atof(minS.c_str());
+        double maxAmt = (maxS.empty() || !isNumericDecimal(maxS)) ? -1 : atof(maxS.c_str());
 
         g.transactions = filterTransactions(g.transactions, accNo, type, from, to, minAmt, maxAmt);
         stringstream ss;
@@ -2350,14 +2421,29 @@ static void HandleCommand(int id) {
             SetStatus("Fill in all fields", 2);
             break;
         }
+        if (!isNumeric(accStr)) { SetStatus("Enter a valid numeric account number", 2); break; }
+        if (!isNumericDecimal(amtStr)) { SetStatus("Enter a valid loan amount", 2); break; }
+        if (!isNumeric(termStr)) { SetStatus("Enter a valid loan term in months", 2); break; }
+
         int accNo = atoi(accStr.c_str());
         double amt = atof(amtStr.c_str());
         int term = atoi(termStr.c_str());
+
+        if (term < 1 || term > 60) { SetStatus("Loan term must be between 1 and 60 months", 2); break; }
+
         loadAccounts(g.accounts);
         int idx = findAccountIndex(accNo, g.accounts);
         if (idx < 0) { SetStatus("Account not found", 2); break; }
+        if (g.accounts[idx].status != "active") { SetStatus("Account is not active", 2); break; }
+
+        loadLoans(g.loans);
+        if (hasActiveLoan(accNo, g.loans)) {
+            SetStatus("This account already has an active loan application", 2);
+            break;
+        }
+
         if (!isValidLoanAmount(amt, g.accounts[idx].balance)) {
-            SetStatus("Loan amount exceeds 50% of balance", 2);
+            SetStatus("Loan amount cannot exceed 3x current account balance", 2);
             break;
         }
 
@@ -2391,7 +2477,13 @@ static void HandleCommand(int id) {
     }
 
     case BTN_BACK:
-        GoToScreen(SCR_LOGIN);
+        if (g.isAdmin) {
+            GoToScreen(SCR_ADMIN_DASH);
+        } else if (g.currentAccIdx >= 0) {
+            GoToScreen(SCR_ATM_MENU);
+        } else {
+            GoToScreen(SCR_LOGIN);
+        }
         break;
 
     case BTN_DO_BACKUP: {

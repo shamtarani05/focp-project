@@ -37,6 +37,24 @@ bool ensureDataFilesExist() {
     return true;
 }
 
+static int safeStoi(const string& s, int defaultVal = 0) {
+    if (s.empty()) return defaultVal;
+    try {
+        return stoi(s);
+    } catch (...) {
+        return defaultVal;
+    }
+}
+
+static double safeStod(const string& s, double defaultVal = 0.0) {
+    if (s.empty()) return defaultVal;
+    try {
+        return stod(s);
+    } catch (...) {
+        return defaultVal;
+    }
+}
+
 bool loadAccounts(vector<Account>& accounts) {
     accounts.clear();
     ifstream file(ACCOUNTS_FILE);
@@ -48,15 +66,16 @@ bool loadAccounts(vector<Account>& accounts) {
         stringstream ss(line);
         Account acc;
         string temp;
-        getline(ss, temp, '|'); acc.accountNo = stoi(temp);
+        getline(ss, temp, '|'); acc.accountNo = safeStoi(temp);
+        if (acc.accountNo <= 0) continue; // Skip invalid record
         getline(ss, acc.name, '|');
         getline(ss, acc.cnic, '|');
         getline(ss, acc.accountType, '|');
-        getline(ss, temp, '|'); acc.balance = stod(temp);
+        getline(ss, temp, '|'); acc.balance = safeStod(temp);
         getline(ss, acc.status, '|');
         getline(ss, acc.pinHash, '|');
-        getline(ss, temp, '|'); acc.pinAttempts = stoi(temp);
-        getline(ss, temp, '|'); acc.dailyWithdrawn = stod(temp);
+        getline(ss, temp, '|'); acc.pinAttempts = safeStoi(temp);
+        getline(ss, temp, '|'); acc.dailyWithdrawn = safeStod(temp);
         getline(ss, acc.lastWithdrawalDate, '|');
         getline(ss, acc.creationDate, '|');
         accounts.push_back(acc);
@@ -64,6 +83,7 @@ bool loadAccounts(vector<Account>& accounts) {
     file.close();
     return true;
 }
+
 
 bool saveAccounts(const vector<Account>& accounts) {
     ofstream file(ACCOUNTS_FILE);
@@ -124,13 +144,13 @@ bool loadTransactions(vector<Transaction>& transactions) {
         Transaction t;
         string temp;
         getline(ss, t.transactionID, '|');
-        getline(ss, temp, '|'); t.accountNo = stoi(temp);
+        getline(ss, temp, '|'); t.accountNo = safeStoi(temp);
         getline(ss, t.type, '|');
-        getline(ss, temp, '|'); t.amount = stod(temp);
+        getline(ss, temp, '|'); t.amount = safeStod(temp);
         getline(ss, t.dateTime, '|');
-        getline(ss, temp, '|'); t.resultingBalance = stod(temp);
+        getline(ss, temp, '|'); t.resultingBalance = safeStod(temp);
         getline(ss, t.details, '|');
-        transactions.push_back(t);
+        if (!t.transactionID.empty()) transactions.push_back(t);
     }
     file.close();
     return true;
@@ -171,17 +191,17 @@ bool loadLoans(vector<Loan>& loans) {
         stringstream ss(line);
         Loan loan;
         string temp;
-        getline(ss, temp, '|'); loan.loanId = stoi(temp);
-        getline(ss, temp, '|'); loan.accountNo = stoi(temp);
-        getline(ss, temp, '|'); loan.amount = stod(temp);
-        getline(ss, temp, '|'); loan.interestRate = stod(temp);
-        getline(ss, temp, '|'); loan.termMonths = stoi(temp);
-        getline(ss, temp, '|'); loan.monthlyPayment = stod(temp);
+        getline(ss, temp, '|'); loan.loanId = safeStoi(temp);
+        getline(ss, temp, '|'); loan.accountNo = safeStoi(temp);
+        getline(ss, temp, '|'); loan.amount = safeStod(temp);
+        getline(ss, temp, '|'); loan.interestRate = safeStod(temp);
+        getline(ss, temp, '|'); loan.termMonths = safeStoi(temp);
+        getline(ss, temp, '|'); loan.monthlyPayment = safeStod(temp);
         getline(ss, loan.status, '|');
         getline(ss, loan.applicationDate, '|');
-        getline(ss, temp, '|'); loan.remainingAmount = stod(temp);
-        getline(ss, temp, '|'); loan.monthsPaid = stoi(temp);
-        loans.push_back(loan);
+        getline(ss, temp, '|'); loan.remainingAmount = safeStod(temp);
+        getline(ss, temp, '|'); loan.monthsPaid = safeStoi(temp);
+        if (loan.loanId > 0) loans.push_back(loan);
     }
     file.close();
     return true;
@@ -231,9 +251,9 @@ bool loadCashInventory(vector<CashNote>& inventory) {
         stringstream ss(line);
         CashNote note;
         string temp;
-        getline(ss, temp, '|'); note.denomination = stoi(temp);
-        getline(ss, temp, '|'); note.count = stoi(temp);
-        inventory.push_back(note);
+        getline(ss, temp, '|'); note.denomination = safeStoi(temp);
+        getline(ss, temp, '|'); note.count = safeStoi(temp);
+        if (note.denomination > 0) inventory.push_back(note);
     }
     file.close();
     return true;
@@ -354,14 +374,14 @@ bool loadReactivationRequests(vector<ReactivationRequest>& requests) {
         stringstream ss(line);
         ReactivationRequest req;
         string temp;
-        getline(ss, temp, '|'); req.requestId  = stoi(temp);
-        getline(ss, temp, '|'); req.accountNo  = stoi(temp);
+        getline(ss, temp, '|'); req.requestId  = safeStoi(temp);
+        getline(ss, temp, '|'); req.accountNo  = safeStoi(temp);
         getline(ss, req.name,     '|');
         getline(ss, req.cnic,     '|');
         getline(ss, req.reason,   '|');
         getline(ss, req.dateTime, '|');
         getline(ss, req.status,   '|');
-        requests.push_back(req);
+        if (req.requestId > 0) requests.push_back(req);
     }
     file.close();
     return true;

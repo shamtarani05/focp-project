@@ -113,6 +113,52 @@ bool isNumeric(const string& s) {
     return true;
 }
 
+bool isNumericDecimal(const string& s) {
+    if (s.empty()) return false;
+    int dotCount = 0;
+    for (size_t i = 0; i < s.length(); i++) {
+        char c = s[i];
+        if (c == '.') {
+            dotCount++;
+            if (dotCount > 1) return false;
+        } else if (!isdigit(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isMultipleOf100(double amount) {
+    if (amount <= 0) return false;
+    long long rounded = (long long)(amount + 0.0001);
+    if (abs(amount - (double)rounded) > 0.001) return false; // not an integer
+    return (rounded % 100 == 0);
+}
+
+double getTotalCashInATM(const vector<CashNote>& inventory) {
+    double total = 0;
+    for (const auto& note : inventory) {
+        total += (double)note.denomination * note.count;
+    }
+    return total;
+}
+
+bool hasPendingReactivationRequest(int accountNo, const vector<ReactivationRequest>& requests) {
+    for (const auto& req : requests) {
+        if (req.accountNo == accountNo && req.status == "pending") return true;
+    }
+    return false;
+}
+
+bool hasActiveLoan(int accountNo, const vector<Loan>& loans) {
+    for (const auto& l : loans) {
+        if (l.accountNo == accountNo && (l.status == "approved" || l.status == "active" || l.status == "pending")) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool isAlphabetic(const string& s) {
     if (s.empty()) return false;
     for (char c : s) {
@@ -129,8 +175,12 @@ int findAccountIndex(int accountNo, const vector<Account>& accounts) {
 }
 
 int findAccountByCNIC(const string& cnic, const vector<Account>& accounts) {
+    string cleaned;
+    for (char c : cnic) if (c != '-' && c != ' ') cleaned += c;
     for (size_t i = 0; i < accounts.size(); i++) {
-        if (accounts[i].cnic == cnic) return (int)i;
+        string accCnicClean;
+        for (char c : accounts[i].cnic) if (c != '-' && c != ' ') accCnicClean += c;
+        if (accCnicClean == cleaned) return (int)i;
     }
     return -1;
 }

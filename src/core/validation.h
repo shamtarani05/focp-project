@@ -22,7 +22,11 @@ bool isValidOTP(const string& input, const string& otp);
 bool isValidLoanAmount(double amount, double balance);
 
 bool isNumeric(const string& s);
-bool isAlphabetic(const string& s);
+bool isNumericDecimal(const string& s);
+bool isMultipleOf100(double amount);
+double getTotalCashInATM(const vector<CashNote>& inventory);
+bool hasPendingReactivationRequest(int accountNo, const vector<ReactivationRequest>& requests);
+bool hasActiveLoan(int accountNo, const vector<Loan>& loans);
 
 int findAccountIndex(int accountNo, const vector<Account>& accounts);
 int findAccountByCNIC(const string& cnic, const vector<Account>& accounts);
