@@ -2207,38 +2207,37 @@ static void HandleCommand(int id) {
     }
 
     case BTN_DO_DEPOSIT: {
-        string accStr = GetEditText(EDT_ACCNO);
+        if (g.currentAccIdx < 0 || g.currentAccIdx >= (int)g.accounts.size()) {
+            SetStatus("No account selected", 2);
+            break;
+        }
         string amtStr = GetEditText(EDT_AMT);
-        if (accStr.empty() || amtStr.empty()) { SetStatus("Fill in all fields", 2); break; }
-        if (!isNumeric(accStr)) { SetStatus("Enter a valid numeric account number", 2); break; }
-        if (!isNumericDecimal(amtStr)) { SetStatus("Enter a valid deposit amount", 2); break; }
+        if (amtStr.empty() || !isNumericDecimal(amtStr)) { SetStatus("Enter a valid deposit amount", 2); break; }
 
-        int accNo = atoi(accStr.c_str());
         double amt = atof(amtStr.c_str());
         if (!isValidAmount(amt)) { SetStatus("Deposit amount must be positive", 2); break; }
         if (amt > 1000000.0) { SetStatus("Maximum single deposit limit is Rs. 1,000,000", 2); break; }
 
         loadAccounts(g.accounts);
-        int idx = findAccountIndex(accNo, g.accounts);
-        if (idx < 0) { SetStatus("Account not found", 2); break; }
-        if (g.accounts[idx].status != "active") { SetStatus("Account is frozen or locked. Cannot deposit.", 2); break; }
+        auto& acc = g.accounts[g.currentAccIdx];
+        if (acc.status != "active") { SetStatus("Account is frozen or locked. Cannot deposit.", 2); break; }
 
-        g.accounts[idx].balance += amt;
+        acc.balance += amt;
         saveAccounts(g.accounts);
 
         Transaction txn;
         txn.transactionID = generateTransactionID(g.transactions);
-        txn.accountNo = accNo;
+        txn.accountNo = acc.accountNo;
         txn.type = "deposit";
         txn.amount = amt;
         txn.dateTime = getCurrentDateTimeStr();
-        txn.resultingBalance = g.accounts[idx].balance;
+        txn.resultingBalance = acc.balance;
         txn.details = "Cash deposit";
         g.transactions.push_back(txn);
         saveTransactions(g.transactions);
-        generateReceipt(txn, g.accounts[idx]);
+        generateReceipt(txn, acc);
 
-        logAudit("Deposit", "Account " + to_string(accNo) + " deposited Rs. " + to_string(amt));
+        logAudit("Deposit", "Account " + to_string(acc.accountNo) + " deposited Rs. " + to_string(amt));
         stringstream ss;
         ss << "Deposited Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);

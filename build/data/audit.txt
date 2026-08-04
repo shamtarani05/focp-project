@@ -371,3 +371,44 @@
 2026-08-04 18:05:33|Reactivation Request|Account 1002 submitted reactivation request #9
 2026-08-04 18:06:05|Admin Login|Administrator logged in
 2026-08-04 18:06:10|Reactivation Approved|Request 9 for account 1002 approved
+2026-08-04 23:45:56|ATM Login|Account 1002 logged in
+2026-08-04 23:45:58|Navigation|Sidebar -> ATM Balance
+2026-08-04 23:45:59|Navigation|Sidebar -> Deposit
+2026-08-04 23:46:07|Navigation|Sidebar -> Withdraw
+2026-08-04 23:46:10|Navigation|Sidebar -> Transfer
+2026-08-04 23:46:13|Navigation|Sidebar -> Mini Statement
+2026-08-04 23:46:16|Navigation|Sidebar -> Change PIN
+2026-08-04 23:46:18|Navigation|Sidebar -> ATM Info
+2026-08-04 23:46:25|Navigation|Sidebar -> ATM Menu
+2026-08-04 23:46:35|Navigation|Sidebar -> ATM Balance
+2026-08-04 23:46:36|Navigation|Sidebar -> ATM Menu
+2026-08-04 23:46:44|Navigation|Sidebar -> ATM Balance
+2026-08-04 23:46:48|Navigation|Sidebar -> Deposit
+2026-08-04 23:46:49|Navigation|Sidebar -> Withdraw
+2026-08-04 23:46:54|Navigation|Sidebar -> Transfer
+2026-08-04 23:46:55|Navigation|Sidebar -> Mini Statement
+2026-08-04 23:46:57|Navigation|Sidebar -> Change PIN
+2026-08-04 23:46:58|Navigation|Sidebar -> ATM Info
+2026-08-04 23:46:59|Navigation|Sidebar -> Change PIN
+2026-08-04 23:47:13|PIN Changed|Account 1002 PIN changed
+2026-08-04 23:47:16|Navigation|Sidebar -> ATM Menu
+2026-08-04 23:47:42|ATM Login|Account 1002 logged in
+2026-08-04 23:47:44|Navigation|Sidebar -> ATM Balance
+2026-08-04 23:47:47|Navigation|Sidebar -> ATM Balance
+2026-08-04 23:47:48|Navigation|Sidebar -> Deposit
+2026-08-04 23:47:49|Navigation|Sidebar -> Withdraw
+2026-08-04 23:47:50|Navigation|Sidebar -> Transfer
+2026-08-04 23:47:50|Navigation|Sidebar -> Mini Statement
+2026-08-04 23:47:51|Navigation|Sidebar -> Change PIN
+2026-08-04 23:47:52|Navigation|Sidebar -> ATM Info
+2026-08-04 23:48:00|Navigation|Sidebar -> ATM Menu
+2026-08-04 23:48:00|Navigation|Sidebar -> ATM Balance
+2026-08-04 23:48:04|Navigation|Sidebar -> Deposit
+2026-08-04 23:48:05|Navigation|Sidebar -> Withdraw
+2026-08-04 23:48:16|Withdrawal|Account 1002 withdrew Rs. 10000.000000
+2026-08-04 23:48:19|Navigation|Sidebar -> Deposit
+2026-08-04 23:53:38|ATM Login|Account 1002 logged in
+2026-08-04 23:53:42|Navigation|Sidebar -> Deposit
+2026-08-04 23:53:50|Navigation|Sidebar -> Withdraw
+2026-08-04 23:53:54|Navigation|Sidebar -> Deposit
+2026-08-04 23:54:03|Deposit|Account 1002 deposited Rs. 5000.000000
