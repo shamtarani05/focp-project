@@ -1,0 +1,5 @@
+AccountNo,Name,CNIC,AccountType,Balance,Status,PinAttempts,DailyWithdrawn,LastWithdrawalDate,CreationDate
+1001,sham,23302-1232435-1,current,22500.00,active,0,2500.00,2026-07-21,2026-07-21 23:49:47
+1002,Aqib Ramzan,44302-2232312-1,savings,1015000.00,frozen,0,30000.00,2026-07-31,2026-07-31 05:25:21
+1002,Aqib Ramzan,44302-2232312-1,savings,25000.00,active,0,0.00,2026-07-31,2026-07-31 05:25:21
+99999,Test User,12345-6789012-3,savings,15000.00,active,0,0.00,2026-08-05,2026-08-05

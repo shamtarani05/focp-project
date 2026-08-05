@@ -49,7 +49,10 @@ bool isValidName(const string& name) {
 }
 
 bool isValidAccountType(const string& type) {
-    return (type == "savings" || type == "current");
+    for (int i = 0; i < NUM_ACCOUNT_TYPES; i++) {
+        if (type == VALID_ACCOUNT_TYPES[i]) return true;
+    }
+    return false;
 }
 
 bool hasSufficientBalance(int accountNo, double amount, const vector<Account>& accounts) {

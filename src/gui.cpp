@@ -360,6 +360,9 @@ static void DrawSidebar(HDC hdc, RECT rc, AppState& s) {
 }
 
 static int SidebarHitTest(LPARAM lp, AppState& s) {
+    if (s.screen == SCR_LOGIN || s.screen == SCR_ADMIN_LOGIN || s.screen == SCR_ATM_LOGIN || s.screen == SCR_CONTACT_ADMIN) {
+        return -1;
+    }
     int mx = LOWORD(lp);
     int my = HIWORD(lp);
     if (mx >= SIDEBAR_W || my <= HEADER_H) return -1;
@@ -1223,39 +1226,36 @@ static void PaintAdminUnlock(HDC hdc, RECT rc) {
 }
 
 // ============================
-// CONTACT ADMIN SCREEN (ATM side)
+// CONTACT ADMIN SCREEN (ATM side) - Standalone Page
 // ============================
 static void PaintContactAdmin(HDC hdc, RECT rc) {
-    int sx = SIDEBAR_W + 35;
-    int sy = HEADER_H + 25;
-    int cw = min(560, (int)(rc.right - SIDEBAR_W - 60));
+    int cx = rc.right / 2;
+    int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+    int cw = 620;
+    int ch = 410;
+    int cardX = cx - cw / 2;
+    int cardY = cy - ch / 2;
 
-    // Title
-    Txt(hdc, "Request Account Reactivation", sx, sy, hFontHeading, Primary);
-    Txt(hdc, "Fill in your details and reason - the admin will review your request", sx, sy + 28, hFontSmall, TextLight);
-    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
-    HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 46, NULL);
-    LineTo(hdc, sx + 320, sy + 46);
-    SelectObject(hdc, old);
-    DeleteObject(linePen);
+    // Title & Subtitle centered above card
+    TxtCenter(hdc, "Request Account Reactivation", 0, cardY - 60, rc.right, 30, hFontHeading, Primary);
+    TxtCenter(hdc, "Fill in your details and reason - the bank administrator will review your request", 0, cardY - 30, rc.right, 20, hFontSmall, TextLight);
 
-    int cardY = sy + 58;
-    DrawCard(hdc, sx, cardY, cw, 285);
+    // Card Container
+    DrawCard(hdc, cardX, cardY, cw, ch);
 
     // Field labels inside card
-    Txt(hdc, "Account Number:", sx + 30, cardY + 24, hFontBold, Text);
-    Txt(hdc, "Full Name:",      sx + 30, cardY + 74, hFontBold, Text);
-    Txt(hdc, "CNIC:",           sx + 30, cardY + 124, hFontBold, Text);
-    Txt(hdc, "Reason:",         sx + 30, cardY + 174, hFontBold, Text);
+    Txt(hdc, "Account Number:", cardX + 40, cardY + 30,  hFontBold, Text);
+    Txt(hdc, "Full Name:",      cardX + 40, cardY + 80,  hFontBold, Text);
+    Txt(hdc, "CNIC:",           cardX + 40, cardY + 130, hFontBold, Text);
+    Txt(hdc, "Reason:",         cardX + 40, cardY + 180, hFontBold, Text);
 
-    // Info note below card
+    // Info note box inside card bottom
     HBRUSH noteBg = CreateSolidBrush(RGB(239, 246, 255));
     HPEN notePen = CreatePen(PS_SOLID, 1, RGB(147, 197, 253));
-    RoundRect2(hdc, sx, cardY + 300, cw, 44, 8, noteBg, notePen);
+    RoundRect2(hdc, cardX + 30, cardY + 315, cw - 60, 48, 8, noteBg, notePen);
     DeleteObject(noteBg);
     DeleteObject(notePen);
-    Txt(hdc, "Your request will be reviewed by the bank administrator.", sx + 15, cardY + 312, hFontSmall, RGB(30, 64, 175));
+    TxtCenter(hdc, "Your request will be submitted directly to the bank administrator for review.", cardX + 30, cardY + 329, cw - 60, 20, hFontSmall, RGB(30, 64, 175));
 }
 
 // ============================
@@ -1665,7 +1665,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
     FillRect(hdc, &rc, hBrushBg);
     DrawHeader(hdc, rc, g);
 
-    if (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_ATM_LOGIN) {
+    if (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_ATM_LOGIN && g.screen != SCR_CONTACT_ADMIN) {
         DrawSidebar(hdc, rc, g);
     }
 
@@ -1879,15 +1879,21 @@ static void CreateScreenControls() {
         break;
     }
     case SCR_CONTACT_ADMIN: {
-        int cardY = sy + 58;
-        int edtX  = sx + 190;
-        int edtW  = min(560, (int)(rc.right - SIDEBAR_W - 60)) - 220;
-        MakeEdit(EDT_ACCNO, edtX, cardY + 20,  edtW, 34);
-        MakeEdit(EDT_NAME,  edtX, cardY + 70,  edtW, 34);
-        MakeEdit(EDT_CNIC,  edtX, cardY + 120, edtW, 34);
-        MakeEdit(EDT_REASON,edtX, cardY + 170, edtW, 34);
-        MakeBtn(BTN_DO_CONTACT_ADMIN, "Submit Request", edtX,       cardY + 225, 150, 40, Primary);
-        MakeBtn(BTN_BACK,             "Back",           edtX + 165, cardY + 225, 100, 40, RGB(100,116,139));
+        int cx = rc.right / 2;
+        int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+        int cw = 620;
+        int ch = 410;
+        int cardX = cx - cw / 2;
+        int cardY = cy - ch / 2;
+
+        int edtX = cardX + 210;
+        int edtW = 360;
+        MakeEdit(EDT_ACCNO,  edtX, cardY + 24,  edtW, 34);
+        MakeEdit(EDT_NAME,   edtX, cardY + 74,  edtW, 34);
+        MakeEdit(EDT_CNIC,   edtX, cardY + 124, edtW, 34);
+        MakeEdit(EDT_REASON, edtX, cardY + 174, edtW, 34);
+        MakeBtn(BTN_DO_CONTACT_ADMIN, "Submit Request", edtX,       cardY + 235, 170, 42, Primary);
+        MakeBtn(BTN_BACK,             "Back",           edtX + 185, cardY + 235, 120, 42, RGB(100,116,139));
         break;
     }
     case SCR_ADMIN_REQUESTS: {
@@ -2215,11 +2221,28 @@ static void HandleCommand(int id) {
             break;
         }
 
-        // Verify Full Name matches registered account details (case-insensitive)
-        string lowerInputName = name, lowerRegName = g.accounts[accIdx].name;
-        for (char& c : lowerInputName) c = (char)tolower(c);
-        for (char& c : lowerRegName) c = (char)tolower(c);
-        if (lowerInputName != lowerRegName && lowerRegName.find(lowerInputName) == string::npos && lowerInputName.find(lowerRegName) == string::npos) {
+        // Verify Full Name matches registered account details exactly (case-insensitive & trimmed)
+        auto trimStr = [](const string& s) {
+            size_t start = s.find_first_not_of(" \t\r\n");
+            if (start == string::npos) return string("");
+            size_t end = s.find_last_not_of(" \t\r\n");
+            return s.substr(start, end - start + 1);
+        };
+
+        string trimmedInput = trimStr(name);
+        string trimmedReg   = trimStr(g.accounts[accIdx].name);
+
+        bool nameMatch = (trimmedInput.length() == trimmedReg.length());
+        if (nameMatch) {
+            for (size_t i = 0; i < trimmedInput.length(); i++) {
+                if (tolower((unsigned char)trimmedInput[i]) != tolower((unsigned char)trimmedReg[i])) {
+                    nameMatch = false;
+                    break;
+                }
+            }
+        }
+
+        if (!nameMatch) {
             SetStatus("Full Name does not match the registered account holder!", 2);
             break;
         }
@@ -2525,7 +2548,10 @@ static void HandleCommand(int id) {
     }
 
     case BTN_BACK:
-        if (g.isAdmin) {
+        if (g.screen == SCR_CONTACT_ADMIN) {
+            g.currentAccIdx = -1;
+            GoToScreen(SCR_LOGIN);
+        } else if (g.isAdmin) {
             GoToScreen(SCR_ADMIN_DASH);
         } else if (g.currentAccIdx >= 0) {
             GoToScreen(SCR_ATM_MENU);
@@ -2778,7 +2804,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_MOUSEMOVE: {
         int mx = LOWORD(lp);
         int my = HIWORD(lp);
-        if (mx < SIDEBAR_W && my > HEADER_H) {
+        bool hasSidebar = (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_ATM_LOGIN && g.screen != SCR_CONTACT_ADMIN);
+        if (hasSidebar && mx < SIDEBAR_W && my > HEADER_H) {
             int hit = SidebarHitTest(lp, g);
             if (hit != gHoverSidebarIdx) {
                 gHoverSidebarIdx = hit;

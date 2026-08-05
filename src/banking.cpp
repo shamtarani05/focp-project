@@ -60,14 +60,15 @@ void logAudit(const string& action, const string& details) {
     entry.action = action;
     entry.details = details;
     appendAuditEntry(entry);
+    writeSystemLog("AUDIT", action + ": " + details);
 }
 
 void initCashInventory(vector<CashNote>& inventory) {
     inventory.clear();
-    inventory.push_back(CashNote(5000, 100));
-    inventory.push_back(CashNote(1000, 200));
-    inventory.push_back(CashNote(500,  300));
-    inventory.push_back(CashNote(100,  500));
+    const int defaultCounts[NUM_DENOMINATIONS] = {100, 200, 300, 500};
+    for (int i = 0; i < NUM_DENOMINATIONS; i++) {
+        inventory.push_back(CashNote(DENOMINATIONS[i], defaultCounts[i]));
+    }
     saveCashInventory(inventory);
 }
 

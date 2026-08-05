@@ -100,4 +100,20 @@ const int    MAX_PIN_ATTEMPTS       = 3;
 const int DENOMINATIONS[]   = {5000, 1000, 500, 100};
 const int NUM_DENOMINATIONS = 4;
 
+const string VALID_ACCOUNT_TYPES[] = {"savings", "current"};
+const int    NUM_ACCOUNT_TYPES     = 2;
+
+const string VALID_STATUSES[] = {"active", "frozen", "locked"};
+const int    NUM_STATUSES     = 3;
+
+const string REQUIRED_DATA_FILES[] = {
+    DATA_DIR + "/accounts.txt",
+    DATA_DIR + "/transactions.txt",
+    DATA_DIR + "/audit.txt",
+    DATA_DIR + "/loans.txt",
+    DATA_DIR + "/cash_inventory.txt",
+    DATA_DIR + "/reactivation_requests.txt"
+};
+const int NUM_DATA_FILES = 6;
+
 #endif

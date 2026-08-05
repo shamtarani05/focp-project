@@ -1,0 +1,19 @@
+=================================================================
+                 NATIONAL BANK - ACCOUNT STATEMENT               
+=================================================================
+  Account Number : 99999
+  Account Holder : Test User
+  CNIC           : 12345-6789012-3
+  Account Type   : savings
+  Current Balance: Rs. 15000.00
+  Status         : active
+-----------------------------------------------------------------
+  TRANSACTION HISTORY:
+  TXN ID        Date/Time           Type              Amount       Balance
+  ---------------------------------------------------------------
+  TXN_TEST_001  2026-08-05 17:42:55 deposit          5000.00      20000.00
+-----------------------------------------------------------------
+  Total Transactions : 1
+  Total Deposits     : Rs. 5000.00
+  Total Withdrawals  : Rs. 0.00
+=================================================================
