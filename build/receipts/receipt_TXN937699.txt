@@ -1,17 +1,17 @@
 =============================================
         NATIONAL BANK - TRANSACTION RECEIPT   
 =============================================
-  Transaction ID  : TXN_TEST_001
-  Date/Time       : 2026-08-05 18:40:39
+  Transaction ID  : TXN937699
+  Date/Time       : 2026-08-05 18:47:57
 ---------------------------------------------
-  Account Number  : 99999
-  Account Holder  : Test User
+  Account Number  : 1001
+  Account Holder  : sham
 ---------------------------------------------
-  Type            : deposit
-  Amount          : Rs. 5000.00
-  Resulting Bal   : Rs. 20000.00
+  Type            : loan_payment
+  Amount          : Rs. 9880.00
+  Resulting Bal   : Rs. 577000.00
 ---------------------------------------------
-  Details         : Test deposit
+  Details         : Repayment for Loan #2
 ---------------------------------------------
   Thank you for banking with us!
 =============================================

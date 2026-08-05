@@ -126,6 +126,8 @@ static string ScreenGuide(Screen screen) {
         case SCR_ATM_MINISTATE:return "View your recent transactions and mini statement.";
         case SCR_ATM_CHANGEPIN:return "Change your account PIN. Enter current PIN, new PIN, and confirm.";
         case SCR_ATM_INFO:  return "ATM information screen showing machine details and cash availability.";
+        case SCR_ATM_REPAY_LOAN: return "Loan repayment. Pay your monthly loan installment or pay off your loan balance.";
+        case SCR_ATM_APPLY_LOAN: return "Apply for a loan. Request a new loan application for bank administrator review.";
         case SCR_OTP:       return "OTP verification. A one time password has been sent for large transfer verification. Please enter the OTP code.";
         case SCR_CONTACT_ADMIN: return "Contact Administrator. Fill in your details and reason to request account reactivation.";
         case SCR_ADMIN_REQUESTS: return "Reactivation Requests. Review and approve or reject account reactivation requests from customers.";
@@ -157,6 +159,9 @@ enum EditID {
     EDT_TRANSFER_TARGET, EDT_TRANSFER_AMT,
     EDT_OTP,
     EDT_REASON,
+    EDT_REPAY_AMT,
+    EDT_APPLY_LOAN_AMT,
+    EDT_APPLY_LOAN_TERM,
 };
 
 enum BtnID {
@@ -178,6 +183,10 @@ enum BtnID {
     BTN_ADMIN_REQUESTS,
     BTN_CONTACT_ADMIN_SCREEN,
     BTN_NOTIF_REQUESTS,
+    BTN_DO_REPAY_INSTALLMENT,
+    BTN_DO_REPAY_CUSTOM,
+    BTN_DO_REPAY_FULL,
+    BTN_DO_APPLY_LOAN,
 };
 
 const int BTN_DYNAMIC_APPROVE_BASE = 20000;
@@ -297,6 +306,8 @@ static const SidebarItem sidebarItems[] = {
     {"Transfer",        SCR_ATM_TRANSFER,     false},
     {"Mini Statement",  SCR_ATM_MINISTATE,    false},
     {"Change PIN",      SCR_ATM_CHANGEPIN,    false},
+    {"Pay Loan",        SCR_ATM_REPAY_LOAN,   false},
+    {"Apply Loan",      SCR_ATM_APPLY_LOAN,   false},
     {"ATM Info",        SCR_ATM_INFO,         false},
 };
 static const int NUM_SIDEBAR_ITEMS = sizeof(sidebarItems)/sizeof(sidebarItems[0]);
@@ -932,11 +943,13 @@ static void PaintATMMenu(HDC hdc, RECT rc) {
         {"Transfer Funds", "Send money to another account", RGB(156,39,176), SCR_ATM_TRANSFER},
         {"Mini Statement", "View recent transactions", RGB(0,150,136), SCR_ATM_MINISTATE},
         {"Change PIN", "Update your security PIN", RGB(255,87,34), SCR_ATM_CHANGEPIN},
+        {"Pay Loan", "Repay loan installments or payoff", RGB(245,158,11), SCR_ATM_REPAY_LOAN},
+        {"Apply Loan", "Apply for a new bank loan", RGB(16,185,129), SCR_ATM_APPLY_LOAN},
     };
 
     int cardW = (cw - 30) / 3;
     int cardH = 110;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 8; i++) {
         int col = i % 3;
         int row = i / 3;
         int cx = sx + col * (cardW + 15);
@@ -1170,6 +1183,165 @@ static void PaintATMInfo(HDC hdc, RECT rc) {
         Txt(hdc, ss.str().c_str(), sx + 25, y, hFontMono, Text);
         y += 22;
     }
+}
+
+// ============================
+// ATM LOAN REPAYMENT SCREEN
+// ============================
+static void PaintATMRepayLoan(HDC hdc, RECT rc) {
+    int sx = SIDEBAR_W + 30;
+    int sy = HEADER_H + 25;
+    int cw = min(580, (int)(rc.right - SIDEBAR_W - 60));
+
+    Txt(hdc, "Loan Repayment", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Pay your monthly loan installment or pay off your loan balance", sx, sy + 28, hFontSmall, TextLight);
+    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
+    HPEN old = (HPEN)SelectObject(hdc, linePen);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 180, sy + 46);
+    SelectObject(hdc, old);
+    DeleteObject(linePen);
+
+    int cardY = sy + 58;
+
+    if (g.currentAccIdx < 0 || g.currentAccIdx >= (int)g.accounts.size()) {
+        DrawCard(hdc, sx, cardY, cw, 150);
+        Txt(hdc, "Please log in to access loan repayment.", sx + 30, cardY + 50, hFontBold, Text);
+        return;
+    }
+
+    int accNo = g.accounts[g.currentAccIdx].accountNo;
+    loadLoans(g.loans);
+
+    int activeLoanIdx = -1;
+    for (size_t i = 0; i < g.loans.size(); i++) {
+        if (g.loans[i].accountNo == accNo && (g.loans[i].status == "active" || g.loans[i].status == "approved") && g.loans[i].remainingAmount > 0.01) {
+            activeLoanIdx = (int)i;
+            break;
+        }
+    }
+
+    if (activeLoanIdx < 0) {
+        DrawCard(hdc, sx, cardY, cw, 160);
+        Txt(hdc, "No Active Loans Found", sx + 30, cardY + 30, hFontBold, Primary);
+        Txt(hdc, "You do not have any active outstanding loan balance to repay at this time.", sx + 30, cardY + 65, hFontNormal, TextLight);
+        return;
+    }
+
+    auto& loan = g.loans[activeLoanIdx];
+
+    // Card 1: Loan Overview
+    DrawCard(hdc, sx, cardY, cw, 180);
+    Txt(hdc, "Active Loan Details", sx + 25, cardY + 20, hFontBold, Primary);
+
+    stringstream s1, s2, s3, s4;
+    s1 << "Loan ID: #" << loan.loanId << "   |   Original Amount: Rs. " << fixed << setprecision(2) << loan.amount;
+    Txt(hdc, s1.str().c_str(), sx + 25, cardY + 55, hFontNormal, Text);
+
+    s2 << "Monthly Installment: Rs. " << fixed << setprecision(2) << loan.monthlyPayment;
+    Txt(hdc, s2.str().c_str(), sx + 25, cardY + 85, hFontBold, RGB(217, 119, 6));
+
+    s3 << "Remaining Balance: Rs. " << fixed << setprecision(2) << loan.remainingAmount;
+    Txt(hdc, s3.str().c_str(), sx + 25, cardY + 115, hFontTitle, Error);
+
+    s4 << "Repayment Progress: " << loan.monthsPaid << " / " << loan.termMonths << " months paid";
+    Txt(hdc, s4.str().c_str(), sx + 25, cardY + 150, hFontSmall, TextLight);
+
+    // Card 2: Repayment Options
+    int card2Y = cardY + 195;
+    DrawCard(hdc, sx, card2Y, cw, 205);
+    Txt(hdc, "Make a Payment", sx + 25, card2Y + 18, hFontBold, Primary);
+
+    Txt(hdc, "Quick Option:", sx + 25, card2Y + 60, hFontBold, Text);
+    Txt(hdc, "Custom Repayment (Rs.):", sx + 25, card2Y + 112, hFontBold, Text);
+
+    stringstream sBal;
+    sBal << "Your Account Balance: Rs. " << fixed << setprecision(2) << g.accounts[g.currentAccIdx].balance;
+    Txt(hdc, sBal.str().c_str(), sx + 25, card2Y + 162, hFontSmall, Success);
+}
+
+// ============================
+// ATM APPLY LOAN SCREEN
+// ============================
+static void PaintATMApplyLoan(HDC hdc, RECT rc) {
+    int sx = SIDEBAR_W + 30;
+    int sy = HEADER_H + 25;
+    int cw = min(580, (int)(rc.right - SIDEBAR_W - 60));
+
+    Txt(hdc, "Apply for a Loan", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Request a new loan application — bank administrator will review your request", sx, sy + 28, hFontSmall, TextLight);
+    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
+    HPEN old = (HPEN)SelectObject(hdc, linePen);
+    MoveToEx(hdc, sx, sy + 46, NULL);
+    LineTo(hdc, sx + 200, sy + 46);
+    SelectObject(hdc, old);
+    DeleteObject(linePen);
+
+    int cardY = sy + 58;
+
+    if (g.currentAccIdx < 0 || g.currentAccIdx >= (int)g.accounts.size()) {
+        DrawCard(hdc, sx, cardY, cw, 150);
+        Txt(hdc, "Please log in to apply for a loan.", sx + 30, cardY + 50, hFontBold, Text);
+        return;
+    }
+
+    int accNo = g.accounts[g.currentAccIdx].accountNo;
+    loadLoans(g.loans);
+
+    int activeLoanIdx = -1;
+    int pendingLoanIdx = -1;
+
+    for (size_t i = 0; i < g.loans.size(); i++) {
+        if (g.loans[i].accountNo == accNo) {
+            if ((g.loans[i].status == "active" || g.loans[i].status == "approved") && g.loans[i].remainingAmount > 0.01) {
+                activeLoanIdx = (int)i;
+                break;
+            } else if (g.loans[i].status == "pending") {
+                pendingLoanIdx = (int)i;
+            }
+        }
+    }
+
+    if (pendingLoanIdx >= 0) {
+        auto& pLoan = g.loans[pendingLoanIdx];
+        DrawCard(hdc, sx, cardY, cw, 220);
+        Txt(hdc, "Loan Application Pending Review", sx + 30, cardY + 25, hFontBold, Warning);
+        
+        stringstream ps1, ps2;
+        ps1 << "Loan ID: #" << pLoan.loanId << "   |   Requested Amount: Rs. " << fixed << setprecision(2) << pLoan.amount;
+        Txt(hdc, ps1.str().c_str(), sx + 30, cardY + 65, hFontNormal, Text);
+
+        ps2 << "Term: " << pLoan.termMonths << " months   |   Est. Monthly Payment: Rs. " << fixed << setprecision(2) << pLoan.monthlyPayment;
+        Txt(hdc, ps2.str().c_str(), sx + 30, cardY + 95, hFontNormal, TextLight);
+
+        Txt(hdc, "Status: Pending Administrator Review", sx + 30, cardY + 125, hFontBold, Warning);
+
+        HBRUSH noteBg = CreateSolidBrush(RGB(254, 243, 199));
+        HPEN notePen = CreatePen(PS_SOLID, 1, RGB(252, 211, 77));
+        RoundRect2(hdc, sx + 25, cardY + 160, cw - 50, 42, 8, noteBg, notePen);
+        DeleteObject(noteBg);
+        DeleteObject(notePen);
+        TxtCenter(hdc, "Your loan application has been submitted and is currently awaiting administrator review.", sx + 25, cardY + 172, cw - 50, 20, hFontSmall, RGB(180, 83, 9));
+        return;
+    }
+
+    if (activeLoanIdx >= 0) {
+        DrawCard(hdc, sx, cardY, cw, 170);
+        Txt(hdc, "Active Loan Exists", sx + 30, cardY + 30, hFontBold, Primary);
+        Txt(hdc, "You currently have an active loan. Please repay your active loan before applying for a new one.", sx + 30, cardY + 65, hFontNormal, TextLight);
+        return;
+    }
+
+    // Form to apply for a loan
+    DrawCard(hdc, sx, cardY, cw, 220);
+    Txt(hdc, "Apply for a New Loan", sx + 25, cardY + 20, hFontBold, Primary);
+
+    Txt(hdc, "Requested Amount (Rs.):", sx + 25, cardY + 62, hFontBold, Text);
+    Txt(hdc, "Term (Months):",           sx + 25, cardY + 112, hFontBold, Text);
+
+    stringstream sLimit;
+    sLimit << "Maximum Eligible Loan (3x Balance): Rs. " << fixed << setprecision(2) << (g.accounts[g.currentAccIdx].balance * 3.0);
+    Txt(hdc, sLimit.str().c_str(), sx + 25, cardY + 170, hFontSmall, Success);
 }
 
 static void PaintAdminActionScreen(HDC hdc, RECT rc,
@@ -1476,15 +1648,15 @@ static void PaintAdminLoans(HDC hdc, RECT rc) {
     DeleteObject(linePen);
 
     // Approve loan form card
-    DrawCard(hdc, sx, sy + 58, cw, 175);
+    DrawCard(hdc, sx, sy + 58, cw, 210);
     int fY = sy + 58;
     Txt(hdc, "Approve New Loan", sx + 20, fY + 15, hFontBold, Text);
-    Txt(hdc, "Account #:",    sx + 20, fY + 52, hFontSmall, TextLight);
-    Txt(hdc, "Loan Amount:",  sx + 20, fY + 102, hFontSmall, TextLight);
-    Txt(hdc, "Term (months):",sx + 20, fY + 152, hFontSmall, TextLight);
+    Txt(hdc, "Account #:",    sx + 20, fY + 50, hFontSmall, TextLight);
+    Txt(hdc, "Loan Amount:",  sx + 20, fY + 95, hFontSmall, TextLight);
+    Txt(hdc, "Term (months):",sx + 20, fY + 140, hFontSmall, TextLight);
 
     // Results card
-    int resY = sy + 250;
+    int resY = sy + 285;
     int cardH2 = ch - resY + HEADER_H + 15;
     DrawCard(hdc, sx, resY, cw, max(cardH2, 80));
 
@@ -1694,6 +1866,8 @@ static void PaintScreen(HDC hdc, RECT rc) {
         case SCR_ATM_MINISTATE: PaintATMMiniState(hdc, rc); break;
         case SCR_ATM_CHANGEPIN: PaintATMChangePIN(hdc, rc); break;
         case SCR_ATM_INFO: PaintATMInfo(hdc, rc); break;
+        case SCR_ATM_REPAY_LOAN: PaintATMRepayLoan(hdc, rc); break;
+        case SCR_ATM_APPLY_LOAN: PaintATMApplyLoan(hdc, rc); break;
         case SCR_OTP: PaintOTPScreen(hdc, rc); break;
         case SCR_CONTACT_ADMIN: PaintContactAdmin(hdc, rc); break;
         case SCR_ADMIN_REQUESTS: PaintAdminRequests(hdc, rc); break;
@@ -1826,9 +2000,9 @@ static void CreateScreenControls() {
     case SCR_ADMIN_LOANS: {
         int fY = sy + 58;
         MakeEdit(EDT_LOAN_ACC,  sx + 160, fY + 44,  210, 32);
-        MakeEdit(EDT_LOAN_AMT,  sx + 160, fY + 94,  210, 32);
-        MakeEdit(EDT_LOAN_TERM, sx + 160, fY + 144, 110, 32);
-        MakeBtn(BTN_DO_LOAN, "Approve Loan", sx + 290, fY + 140, 150, 38, Warning);
+        MakeEdit(EDT_LOAN_AMT,  sx + 160, fY + 89,  210, 32);
+        MakeEdit(EDT_LOAN_TERM, sx + 160, fY + 134, 110, 32);
+        MakeBtn(BTN_DO_LOAN, "Approve Loan", sx + 285, fY + 132, 145, 36, Warning);
         break;
     }
     case SCR_ADMIN_CASH: break;
@@ -1865,6 +2039,56 @@ static void CreateScreenControls() {
         MakeEdit(EDT_CONFIRMPIN, sx + 185, cardY + 122, 210, 36, true);
         MakeBtn(BTN_DO_CHANGEPIN, "Change PIN", sx + 185, cardY + 176, 135, 40, Warning);
         MakeBtn(BTN_BACK,         "Back",       sx + 330, cardY + 176, 90, 40, RGB(100,116,139));
+        break;
+    }
+    case SCR_ATM_REPAY_LOAN: {
+        int cardY = sy + 58;
+        int cw = min(580, (int)(rc.right - SIDEBAR_W - 60));
+        bool hasActiveLoan = false;
+        if (g.currentAccIdx >= 0 && g.currentAccIdx < (int)g.accounts.size()) {
+            int accNo = g.accounts[g.currentAccIdx].accountNo;
+            loadLoans(g.loans);
+            for (const auto& l : g.loans) {
+                if (l.accountNo == accNo && (l.status == "active" || l.status == "approved") && l.remainingAmount > 0.01) {
+                    hasActiveLoan = true;
+                    break;
+                }
+            }
+        }
+        if (hasActiveLoan) {
+            int card2Y = cardY + 195;
+            MakeBtn(BTN_DO_REPAY_INSTALLMENT, "Pay Monthly Installment", sx + 210, card2Y + 52, 210, 36, Primary);
+            MakeEdit(EDT_REPAY_AMT, sx + 210, card2Y + 104, 115, 34);
+            MakeBtn(BTN_DO_REPAY_CUSTOM, "Pay Amount", sx + 335, card2Y + 104, 105, 34, Success);
+            MakeBtn(BTN_DO_REPAY_FULL, "Pay Full Loan", sx + 450, card2Y + 104, 105, 34, Warning);
+            MakeBtn(BTN_BACK, "Back", sx + cw - 95, card2Y + 155, 80, 34, RGB(100, 116, 139));
+        } else {
+            MakeBtn(BTN_BACK, "Back", sx + 30, cardY + 105, 100, 36, RGB(100, 116, 139));
+        }
+        break;
+    }
+    case SCR_ATM_APPLY_LOAN: {
+        int cardY = sy + 58;
+        int cw = min(580, (int)(rc.right - SIDEBAR_W - 60));
+        bool hasPendingOrActive = false;
+        if (g.currentAccIdx >= 0 && g.currentAccIdx < (int)g.accounts.size()) {
+            int accNo = g.accounts[g.currentAccIdx].accountNo;
+            loadLoans(g.loans);
+            for (const auto& l : g.loans) {
+                if (l.accountNo == accNo && (l.status == "pending" || ((l.status == "active" || l.status == "approved") && l.remainingAmount > 0.01))) {
+                    hasPendingOrActive = true;
+                    break;
+                }
+            }
+        }
+        if (hasPendingOrActive) {
+            MakeBtn(BTN_BACK, "Back", sx + 30, cardY + 165, 100, 36, RGB(100, 116, 139));
+        } else {
+            MakeEdit(EDT_APPLY_LOAN_AMT, sx + 210, cardY + 54, 210, 34);
+            MakeEdit(EDT_APPLY_LOAN_TERM, sx + 210, cardY + 104, 115, 34);
+            MakeBtn(BTN_DO_APPLY_LOAN, "Submit Loan Application", sx + 210, cardY + 154, 210, 38, Success);
+            MakeBtn(BTN_BACK, "Back", sx + 435, cardY + 154, 90, 38, RGB(100, 116, 139));
+        }
         break;
     }
     case SCR_ATM_INFO: break;
@@ -2544,6 +2768,158 @@ static void HandleCommand(int id) {
         ss << "Loan #" << loan.loanId << " approved! Rs. " << fixed << setprecision(0) << amt;
         SetStatus(ss.str(), 1);
         SpeakText("Loan approved. " + to_string((int)amt) + " rupees credited to account.");
+        break;
+    }
+
+    case BTN_DO_REPAY_INSTALLMENT:
+    case BTN_DO_REPAY_CUSTOM:
+    case BTN_DO_REPAY_FULL: {
+        if (g.currentAccIdx < 0 || g.currentAccIdx >= (int)g.accounts.size()) {
+            SetStatus("No account logged in", 2);
+            break;
+        }
+        int accNo = g.accounts[g.currentAccIdx].accountNo;
+        loadLoans(g.loans);
+        int loanIdx = -1;
+        for (size_t i = 0; i < g.loans.size(); i++) {
+            if (g.loans[i].accountNo == accNo && (g.loans[i].status == "active" || g.loans[i].status == "approved") && g.loans[i].remainingAmount > 0.01) {
+                loanIdx = (int)i;
+                break;
+            }
+        }
+        if (loanIdx < 0) {
+            SetStatus("No active loan found to repay", 2);
+            break;
+        }
+
+        double payAmt = 0;
+        if (id == BTN_DO_REPAY_INSTALLMENT) {
+            payAmt = min(g.loans[loanIdx].monthlyPayment, g.loans[loanIdx].remainingAmount);
+        } else if (id == BTN_DO_REPAY_FULL) {
+            payAmt = g.loans[loanIdx].remainingAmount;
+        } else {
+            string amtStr = GetEditText(EDT_REPAY_AMT);
+            if (amtStr.empty() || !isNumericDecimal(amtStr)) {
+                SetStatus("Please enter a valid numeric amount to pay", 2);
+                break;
+            }
+            payAmt = atof(amtStr.c_str());
+        }
+
+        if (payAmt <= 0) {
+            SetStatus("Repayment amount must be greater than zero", 2);
+            break;
+        }
+
+        if (payAmt > g.loans[loanIdx].remainingAmount + 0.01) {
+            payAmt = g.loans[loanIdx].remainingAmount;
+        }
+
+        if (g.accounts[g.currentAccIdx].balance < payAmt) {
+            SetStatus("Insufficient account balance to make this loan payment", 2);
+            break;
+        }
+
+        // Deduct payment amount from customer account balance
+        g.accounts[g.currentAccIdx].balance -= payAmt;
+        saveAccounts(g.accounts);
+
+        // Update Loan record
+        g.loans[loanIdx].remainingAmount -= payAmt;
+        g.loans[loanIdx].monthsPaid += 1;
+        if (g.loans[loanIdx].remainingAmount <= 0.01) {
+            g.loans[loanIdx].remainingAmount = 0.0;
+            g.loans[loanIdx].status = "completed";
+        }
+        updateLoanInFile(g.loans[loanIdx]);
+        saveLoans(g.loans);
+
+        // Record Transaction & Receipt
+        Transaction txn;
+        txn.transactionID = generateTransactionID(g.transactions);
+        txn.accountNo = accNo;
+        txn.type = "loan_payment";
+        txn.amount = payAmt;
+        txn.dateTime = getCurrentDateTimeStr();
+        txn.resultingBalance = g.accounts[g.currentAccIdx].balance;
+        txn.details = "Repayment for Loan #" + to_string(g.loans[loanIdx].loanId);
+        g.transactions.push_back(txn);
+        saveTransactions(g.transactions);
+        generateReceipt(txn, g.accounts[g.currentAccIdx]);
+
+        logAudit("Loan Repayment", "Account " + to_string(accNo) + " paid Rs. " + to_string(payAmt) + " towards Loan #" + to_string(g.loans[loanIdx].loanId));
+
+        stringstream ssMsg;
+        ssMsg << "Loan payment of Rs. " << fixed << setprecision(2) << payAmt << " processed successfully!";
+        SetStatus(ssMsg.str(), 1);
+        SpeakText("Loan payment processed successfully.");
+
+        GoToScreen(SCR_ATM_REPAY_LOAN);
+        break;
+    }
+
+    case BTN_DO_APPLY_LOAN: {
+        if (g.currentAccIdx < 0 || g.currentAccIdx >= (int)g.accounts.size()) {
+            SetStatus("No account logged in", 2);
+            break;
+        }
+        int accNo = g.accounts[g.currentAccIdx].accountNo;
+        string amtStr = GetEditText(EDT_APPLY_LOAN_AMT);
+        string termStr = GetEditText(EDT_APPLY_LOAN_TERM);
+
+        if (amtStr.empty() || termStr.empty()) {
+            SetStatus("Please fill in both loan amount and term in months", 2);
+            break;
+        }
+        if (!isNumericDecimal(amtStr)) { SetStatus("Enter a valid numeric loan amount", 2); break; }
+        if (!isNumeric(termStr)) { SetStatus("Enter a valid loan term in months", 2); break; }
+
+        double amt = atof(amtStr.c_str());
+        int term = atoi(termStr.c_str());
+
+        if (amt <= 0) { SetStatus("Loan amount must be greater than zero", 2); break; }
+        if (term < 1 || term > 60) { SetStatus("Loan term must be between 1 and 60 months", 2); break; }
+
+        loadLoans(g.loans);
+        if (hasActiveLoan(accNo, g.loans)) {
+            SetStatus("This account already has an active or pending loan application", 2);
+            break;
+        }
+
+        if (!isValidLoanAmount(amt, g.accounts[g.currentAccIdx].balance)) {
+            stringstream ssErr;
+            ssErr << "Requested loan exceeds limit! Maximum eligible loan is Rs. "
+                  << fixed << setprecision(2) << (g.accounts[g.currentAccIdx].balance * 3.0);
+            SetStatus(ssErr.str(), 2);
+            break;
+        }
+
+        double rate = 5.0;
+        double monthly = (amt * (1 + rate * term / 1200.0)) / term;
+
+        Loan loan;
+        loan.loanId = getNextLoanID(g.loans);
+        loan.accountNo = accNo;
+        loan.amount = amt;
+        loan.interestRate = rate;
+        loan.termMonths = term;
+        loan.monthlyPayment = monthly;
+        loan.status = "pending";
+        loan.applicationDate = getCurrentDateTimeStr();
+        loan.remainingAmount = amt;
+        loan.monthsPaid = 0;
+
+        g.loans.push_back(loan);
+        saveLoans(g.loans);
+
+        logAudit("Loan Application", "Account " + to_string(accNo) + " requested loan #" +
+                 to_string(loan.loanId) + " of Rs. " + to_string(amt));
+        stringstream ss;
+        ss << "Loan application #" << loan.loanId << " submitted! Awaiting admin review.";
+        SetStatus(ss.str(), 1);
+        SpeakText("Loan application submitted for admin approval.");
+
+        GoToScreen(SCR_ATM_APPLY_LOAN);
         break;
     }
 

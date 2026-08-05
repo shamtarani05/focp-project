@@ -33,7 +33,9 @@ enum Screen {
     SCR_ATM_TRANSFER,
     SCR_ATM_MINISTATE,
     SCR_ATM_CHANGEPIN,
-    SCR_ATM_INFO
+    SCR_ATM_INFO,
+    SCR_ATM_REPAY_LOAN,
+    SCR_ATM_APPLY_LOAN
 };
 
 struct AppState {

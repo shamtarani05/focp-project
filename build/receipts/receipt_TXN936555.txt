@@ -1,17 +1,17 @@
 =============================================
         NATIONAL BANK - TRANSACTION RECEIPT   
 =============================================
-  Transaction ID  : TXN_TEST_001
-  Date/Time       : 2026-08-05 18:40:39
+  Transaction ID  : TXN936555
+  Date/Time       : 2026-08-05 18:29:00
 ---------------------------------------------
-  Account Number  : 99999
-  Account Holder  : Test User
+  Account Number  : 1002
+  Account Holder  : Aqib Ramzan
 ---------------------------------------------
-  Type            : deposit
+  Type            : withdrawal
   Amount          : Rs. 5000.00
-  Resulting Bal   : Rs. 20000.00
+  Resulting Bal   : Rs. 440100.00
 ---------------------------------------------
-  Details         : Test deposit
+  Details         : ATM cash withdrawal
 ---------------------------------------------
   Thank you for banking with us!
 =============================================

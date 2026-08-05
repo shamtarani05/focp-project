@@ -12,8 +12,9 @@
   TXN ID        Date/Time           Type              Amount       Balance
   ---------------------------------------------------------------
   TXN_TEST_001  2026-08-05 17:42:55 deposit          5000.00      20000.00
+  TXN_TEST_001  2026-08-05 18:40:39 deposit          5000.00      20000.00
 -----------------------------------------------------------------
-  Total Transactions : 1
-  Total Deposits     : Rs. 5000.00
+  Total Transactions : 2
+  Total Deposits     : Rs. 10000.00
   Total Withdrawals  : Rs. 0.00
 =================================================================
