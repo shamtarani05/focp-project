@@ -11,7 +11,7 @@
 
 using namespace Theme;
 
-const string ADMIN_PASSWORD = "admin123";
+const string ADMIN_PASSWORD = "SAA@Bank#2026!";
 
 // ============================
 // VOICE ASSISTANT
