@@ -158,6 +158,7 @@ enum BtnID {
     BTN_DO_REPAY_FULL,
     BTN_DO_APPLY_LOAN,
     BTN_CLOSE_RECEIPT,
+    BTN_VERIFY_ACCOUNT,
 };
 
 const int BTN_DYNAMIC_APPROVE_BASE = 20000;
@@ -177,6 +178,11 @@ static bool gShowReceipt = false;
 static Transaction gLastTxn;
 static string gLastAccName;
 static int gLastAccNo = 0;
+
+// --- Transfer verification state ---
+static bool gTransferVerified = false;
+static int gVerifiedTargetAccNo = 0;
+static string gVerifiedTargetName;
 
 static void InitGDI() {
     if (gdiInit) return;
@@ -1101,9 +1107,36 @@ static void PaintATMTransfer(HDC hdc, RECT rc) {
     DeleteObject(linePen);
 
     int cardY = sy + 58;
-    DrawCard(hdc, sx, cardY, cw, 195);
-    Txt(hdc, "Target Account #:", sx + 25, cardY + 28, hFontBold, Text);
-    Txt(hdc, "Amount (Rs.):",     sx + 25, cardY + 78, hFontBold, Text);
+
+    if (!gTransferVerified) {
+        // Phase 1: Enter account number to verify
+        DrawCard(hdc, sx, cardY, cw, 140);
+        Txt(hdc, "Step 1: Verify Recipient", sx + 25, cardY + 18, hFontBold, Secondary);
+        Txt(hdc, "Target Account #:", sx + 25, cardY + 55, hFontNormal, Text);
+        Txt(hdc, "Enter account number and click Verify", sx + 25, cardY + 110, hFontSmall, TextLight);
+    } else {
+        // Phase 2: Show verified name, enter amount
+        DrawCard(hdc, sx, cardY, cw, 250);
+        Txt(hdc, "Step 2: Enter Amount", sx + 25, cardY + 18, hFontBold, Secondary);
+
+        // Show verified recipient info
+        Txt(hdc, "Recipient:", sx + 25, cardY + 55, hFontNormal, TextLight);
+        Txt(hdc, gVerifiedTargetName.c_str(), sx + 150, cardY + 55, hFontBold, Success);
+
+        Txt(hdc, "Account #:", sx + 25, cardY + 85, hFontNormal, TextLight);
+        Txt(hdc, to_string(gVerifiedTargetAccNo).c_str(), sx + 150, cardY + 85, hFontNormal, Text);
+
+        // Separator
+        HPEN sepPen = CreatePen(PS_SOLID, 1, RGB(220, 220, 220));
+        HPEN oldSep = (HPEN)SelectObject(hdc, sepPen);
+        MoveToEx(hdc, sx + 20, cardY + 115, NULL);
+        LineTo(hdc, sx + cw - 20, cardY + 115);
+        SelectObject(hdc, oldSep);
+        DeleteObject(sepPen);
+
+        Txt(hdc, "Amount (Rs.):", sx + 25, cardY + 135, hFontBold, Text);
+        Txt(hdc, "Amount must be multiple of Rs. 500", sx + 25, cardY + 210, hFontSmall, TextLight);
+    }
 }
 
 static void PaintATMMiniState(HDC hdc, RECT rc) {
@@ -2225,10 +2258,17 @@ static void CreateScreenControls() {
     }
     case SCR_ATM_TRANSFER: {
         int cardY = sy + 58;
-        MakeEdit(EDT_TRANSFER_TARGET, sx + 185, cardY + 22, 220, 36);
-        MakeEdit(EDT_TRANSFER_AMT,    sx + 185, cardY + 72, 220, 36);
-        MakeBtn(BTN_DO_TRANSFER, "Transfer Funds", sx + 185, cardY + 126, 140, 40, Secondary);
-        MakeBtn(BTN_BACK,        "Back",           sx + 335, cardY + 126, 90, 40, RGB(100,116,139));
+        if (!gTransferVerified) {
+            // Phase 1: Enter account number to verify
+            MakeEdit(EDT_TRANSFER_TARGET, sx + 185, cardY + 48, 220, 36);
+            MakeBtn(BTN_VERIFY_ACCOUNT, "Verify Account", sx + 185, cardY + 95, 140, 38, Success);
+            MakeBtn(BTN_BACK, "Back", sx + 335, cardY + 95, 90, 38, RGB(100,116,139));
+        } else {
+            // Phase 2: Enter amount and transfer
+            MakeEdit(EDT_TRANSFER_AMT, sx + 185, cardY + 128, 220, 36);
+            MakeBtn(BTN_DO_TRANSFER, "Send Money", sx + 185, cardY + 175, 130, 40, Secondary);
+            MakeBtn(BTN_BACK, "Cancel", sx + 325, cardY + 175, 100, 40, RGB(100,116,139));
+        }
         break;
     }
     case SCR_ATM_MINISTATE: break;
@@ -2956,18 +2996,64 @@ static void HandleCommand(int id) {
         break;
     }
 
+    case BTN_VERIFY_ACCOUNT: {
+        string targetStr = GetEditText(EDT_TRANSFER_TARGET);
+        if (targetStr.empty()) {
+            SetStatus("Enter target account number", 2);
+            break;
+        }
+        if (!isNumeric(targetStr)) {
+            SetStatus("Enter a valid account number", 2);
+            break;
+        }
+
+        int targetAcc = atoi(targetStr.c_str());
+        loadAccounts(g.accounts);
+        int receiverIdx = findAccountIndex(targetAcc, g.accounts);
+
+        if (receiverIdx < 0) {
+            SetStatus("Account not found", 2);
+            break;
+        }
+        if (receiverIdx == g.currentAccIdx) {
+            SetStatus("Cannot transfer to your own account", 2);
+            break;
+        }
+        if (g.accounts[receiverIdx].status != "active") {
+            SetStatus("Target account is not active", 2);
+            break;
+        }
+
+        // Verification successful - save target info
+        gTransferVerified = true;
+        gVerifiedTargetAccNo = targetAcc;
+        gVerifiedTargetName = g.accounts[receiverIdx].name;
+
+        SetStatus("Account verified: " + gVerifiedTargetName, 1);
+        SpeakText("Account verified. Recipient is " + gVerifiedTargetName);
+
+        // Refresh screen to show phase 2
+        ClearControls();
+        CreateScreenControls();
+        RefreshScreen();
+        break;
+    }
+
     case BTN_DO_TRANSFER: {
         if (g.currentAccIdx < 0 || g.currentAccIdx >= (int)g.accounts.size()) {
             SetStatus("No account selected", 2);
             break;
         }
-        string targetStr = GetEditText(EDT_TRANSFER_TARGET);
+        if (!gTransferVerified) {
+            SetStatus("Please verify target account first", 2);
+            break;
+        }
+
         string amtStr = GetEditText(EDT_TRANSFER_AMT);
-        if (targetStr.empty() || amtStr.empty()) { SetStatus("Fill in all fields", 2); break; }
-        if (!isNumeric(targetStr)) { SetStatus("Enter a valid target account number", 2); break; }
+        if (amtStr.empty()) { SetStatus("Enter transfer amount", 2); break; }
         if (!isNumericDecimal(amtStr)) { SetStatus("Enter a valid transfer amount", 2); break; }
 
-        int targetAcc = atoi(targetStr.c_str());
+        int targetAcc = gVerifiedTargetAccNo;  // Use verified account
         double amt = atof(amtStr.c_str());
         if (!isValidAmount(amt)) { SetStatus("Transfer amount must be positive", 2); break; }
         if (!isMultipleOf500(amt)) { SetStatus("Transfer amount must be at least Rs. 500 and in multiples of 500 (e.g. 500, 1000, 1500)", 2); break; }
@@ -3008,9 +3094,15 @@ static void HandleCommand(int id) {
         logAudit("Transfer", "Account " + to_string(g.accounts[senderIdx].accountNo) +
                  " transferred Rs. " + to_string(amt) + " to " + to_string(targetAcc));
         stringstream ss;
-        ss << "Transferred Rs. " << fixed << setprecision(2) << amt << " successfully";
+        ss << "Transferred Rs. " << fixed << setprecision(2) << amt << " to " << gVerifiedTargetName;
         SetStatus(ss.str(), 1);
-        SpeakText("Transfer successful.");
+        SpeakText("Transfer successful. Money sent to " + gVerifiedTargetName);
+
+        // Reset verification state after successful transfer
+        gTransferVerified = false;
+        gVerifiedTargetAccNo = 0;
+        gVerifiedTargetName.clear();
+
         ShowReceipt(txn, g.accounts[senderIdx]);
         break;
     }
@@ -3470,6 +3562,13 @@ static void HandleCommand(int id) {
 static void GoToScreen(Screen scr) {
     // Close any open receipt overlay when navigating
     gShowReceipt = false;
+
+    // Reset transfer verification when leaving or entering transfer screen
+    if (g.screen == SCR_ATM_TRANSFER || scr == SCR_ATM_TRANSFER) {
+        gTransferVerified = false;
+        gVerifiedTargetAccNo = 0;
+        gVerifiedTargetName.clear();
+    }
 
     if (scr == SCR_LOGIN) {
         g.isAdmin = false;
