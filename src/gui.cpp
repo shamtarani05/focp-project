@@ -154,6 +154,7 @@ enum BtnID {
     BTN_DO_REPAY_CUSTOM,
     BTN_DO_REPAY_FULL,
     BTN_DO_APPLY_LOAN,
+    BTN_CLOSE_RECEIPT,
 };
 
 const int BTN_DYNAMIC_APPROVE_BASE = 20000;
@@ -167,6 +168,12 @@ static HBRUSH hBrushPrimary, hBrushCard, hBrushBg, hBrushSidebar, hBrushAccent;
 static HPEN hPenCardBorder, hPenShadow;
 static HBRUSH hBrushHover;
 static bool gdiInit = false;
+
+// --- Receipt overlay state ---
+static bool gShowReceipt = false;
+static Transaction gLastTxn;
+static string gLastAccName;
+static int gLastAccNo = 0;
 
 static void InitGDI() {
     if (gdiInit) return;
@@ -590,6 +597,36 @@ static void SetStatus(const string& msg, int type) {
     g.statusMsg = msg;
     g.statusType = type;
     if (gHwnd) InvalidateRect(gHwnd, NULL, FALSE);
+}
+
+// --- Receipt overlay control ---
+static void ShowReceipt(const Transaction& txn, const Account& acc) {
+    gLastTxn = txn;
+    gLastAccNo = acc.accountNo;
+    gLastAccName = acc.name;
+    gShowReceipt = true;
+
+    // Create close button centered at bottom of receipt
+    if (gHwnd) {
+        RECT rc;
+        GetClientRect(gHwnd, &rc);
+        int cx = (rc.right - rc.left) / 2;
+        int cy = (rc.bottom - rc.top) / 2;
+        int cardY = cy - 190; // ch/2 = 380/2 = 190
+        MakeBtn(BTN_CLOSE_RECEIPT, "Close Receipt", cx - 70, cardY + 380 - 45, 140, 38, Primary);
+    }
+
+    if (gHwnd) InvalidateRect(gHwnd, NULL, TRUE);
+}
+
+static void CreateScreenControls(); // Forward declaration
+
+static void CloseReceipt() {
+    gShowReceipt = false;
+    // Remove the close button by recreating screen controls
+    ClearControls();
+    CreateScreenControls();
+    if (gHwnd) InvalidateRect(gHwnd, NULL, TRUE);
 }
 
 // --- Refresh display ---
@@ -1805,6 +1842,111 @@ static void PaintOTPScreen(HDC hdc, RECT rc) {
 }
 
 // ============================
+// RECEIPT OVERLAY
+// ============================
+static void PaintReceiptOverlay(HDC hdc, RECT rc) {
+    if (!gShowReceipt) return;
+
+    // Semi-transparent dark overlay
+    HBRUSH overlayBr = CreateSolidBrush(RGB(0, 0, 0));
+    RECT overlayRc = rc;
+    // Windows GDI doesn't support alpha, so we use a darker shade
+    SetBkMode(hdc, TRANSPARENT);
+
+    // Draw receipt card in center
+    int cw = 420, ch = 380;
+    int cx = (rc.right - rc.left) / 2;
+    int cy = (rc.bottom - rc.top) / 2;
+    int cardX = cx - cw/2;
+    int cardY = cy - ch/2;
+
+    // Card shadow
+    HBRUSH shadowBr = CreateSolidBrush(RGB(0, 0, 0));
+    RECT shadowRc = {cardX + 4, cardY + 4, cardX + cw + 4, cardY + ch + 4};
+    FillRect(hdc, &shadowRc, shadowBr);
+    DeleteObject(shadowBr);
+
+    // White card background
+    HBRUSH cardBr = CreateSolidBrush(RGB(255, 255, 255));
+    RECT cardRc = {cardX, cardY, cardX + cw, cardY + ch};
+    FillRect(hdc, &cardRc, cardBr);
+    DeleteObject(cardBr);
+
+    // Green header bar
+    HBRUSH headerBr = CreateSolidBrush(Success);
+    RECT headerRc = {cardX, cardY, cardX + cw, cardY + 60};
+    FillRect(hdc, &headerRc, headerBr);
+    DeleteObject(headerBr);
+
+    // Receipt title
+    SetTextColor(hdc, RGB(255, 255, 255));
+    TxtCenter(hdc, "Transaction Receipt", cardX, cardY + 10, cw, 24, hFontHeading, RGB(255,255,255));
+    TxtCenter(hdc, "National Bank ATM", cardX, cardY + 36, cw, 16, hFontSmall, RGB(220,255,220));
+
+    // Transaction details
+    int y = cardY + 75;
+    int lx = cardX + 25;
+    int vx = cardX + 180;
+    int lineH = 32;
+
+    SetTextColor(hdc, Text);
+
+    // Transaction type icon and label
+    string txnTypeLabel = "Transaction";
+    COLORREF typeClr = Text;
+    if (gLastTxn.type == "withdrawal") { txnTypeLabel = "Cash Withdrawal"; typeClr = Error; }
+    else if (gLastTxn.type == "deposit") { txnTypeLabel = "Cash Deposit"; typeClr = Success; }
+    else if (gLastTxn.type == "transfer") { txnTypeLabel = "Fund Transfer"; typeClr = Secondary; }
+
+    Txt(hdc, "Type:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, txnTypeLabel.c_str(), vx, y, hFontBold, typeClr);
+    y += lineH;
+
+    Txt(hdc, "Transaction ID:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, gLastTxn.transactionID.c_str(), vx, y, hFontMono, Text);
+    y += lineH;
+
+    Txt(hdc, "Account:", lx, y, hFontSmall, TextLight);
+    string accStr = to_string(gLastAccNo) + " - " + gLastAccName;
+    Txt(hdc, accStr.c_str(), vx, y, hFontNormal, Text);
+    y += lineH;
+
+    Txt(hdc, "Amount:", lx, y, hFontSmall, TextLight);
+    stringstream amtSs;
+    amtSs << "Rs. " << fixed << setprecision(2) << gLastTxn.amount;
+    Txt(hdc, amtSs.str().c_str(), vx, y, hFontHeading, typeClr);
+    y += lineH + 5;
+
+    Txt(hdc, "Balance:", lx, y, hFontSmall, TextLight);
+    stringstream balSs;
+    balSs << "Rs. " << fixed << setprecision(2) << gLastTxn.resultingBalance;
+    Txt(hdc, balSs.str().c_str(), vx, y, hFontBold, Success);
+    y += lineH;
+
+    Txt(hdc, "Date/Time:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, gLastTxn.dateTime.c_str(), vx, y, hFontSmall, TextLight);
+    y += lineH;
+
+    if (!gLastTxn.details.empty()) {
+        Txt(hdc, "Details:", lx, y, hFontSmall, TextLight);
+        Txt(hdc, gLastTxn.details.c_str(), vx, y, hFontSmall, TextLight);
+    }
+
+    // Separator line
+    HPEN sepPen = CreatePen(PS_SOLID, 1, RGB(220, 220, 220));
+    HPEN oldPen = (HPEN)SelectObject(hdc, sepPen);
+    MoveToEx(hdc, cardX + 20, cardY + ch - 65, NULL);
+    LineTo(hdc, cardX + cw - 20, cardY + ch - 65);
+    SelectObject(hdc, oldPen);
+    DeleteObject(sepPen);
+
+    // Footer message
+    TxtCenter(hdc, "Thank you for banking with us!", cardX, cardY + ch - 55, cw, 18, hFontSmall, TextLight);
+
+    DeleteObject(overlayBr);
+}
+
+// ============================
 // MAIN PAINT DISPATCHER
 // ============================
 static void PaintScreen(HDC hdc, RECT rc) {
@@ -1845,6 +1987,11 @@ static void PaintScreen(HDC hdc, RECT rc) {
         case SCR_OTP: PaintOTPScreen(hdc, rc); break;
         case SCR_CONTACT_ADMIN: PaintContactAdmin(hdc, rc); break;
         case SCR_ADMIN_REQUESTS: PaintAdminRequests(hdc, rc); break;
+    }
+
+    // Draw receipt overlay if visible
+    if (gShowReceipt) {
+        PaintReceiptOverlay(hdc, rc);
     }
 
     DrawStatus(hdc, rc, g);
@@ -2573,7 +2720,7 @@ static void HandleCommand(int id) {
         ss << "Deposited Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);
         SpeakText("Deposit successful. " + to_string((int)amt) + " rupees deposited.");
-        ClearControls();
+        ShowReceipt(txn, acc);
         break;
     }
 
@@ -2634,7 +2781,7 @@ static void HandleCommand(int id) {
         ss << "Withdrawn Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);
         SpeakText("Please collect your cash. Withdrawal successful.");
-        ClearControls();
+        ShowReceipt(txn, acc);
         break;
     }
 
@@ -2693,7 +2840,7 @@ static void HandleCommand(int id) {
         ss << "Transferred Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);
         SpeakText("Transfer successful.");
-        ClearControls();
+        ShowReceipt(txn, g.accounts[senderIdx]);
         break;
     }
 
@@ -3038,7 +3185,9 @@ static void HandleCommand(int id) {
     }
 
     case BTN_BACK:
-        if (g.screen == SCR_CONTACT_ADMIN) {
+        if (gShowReceipt) {
+            CloseReceipt();
+        } else if (g.screen == SCR_CONTACT_ADMIN) {
             g.currentAccIdx = -1;
             GoToScreen(SCR_LOGIN);
         } else if (g.isAdmin) {
@@ -3048,6 +3197,10 @@ static void HandleCommand(int id) {
         } else {
             GoToScreen(SCR_LOGIN);
         }
+        break;
+
+    case BTN_CLOSE_RECEIPT:
+        CloseReceipt();
         break;
 
     case BTN_DO_BACKUP: {
@@ -3100,7 +3253,9 @@ static void HandleCommand(int id) {
         stringstream ss;
         ss << "Transferred Rs. " << fixed << setprecision(2) << amt << " successfully";
         SetStatus(ss.str(), 1);
-        GoToScreen(SCR_ATM_MENU);
+        SpeakText("Transfer successful.");
+        GoToScreen(SCR_ATM_TRANSFER);
+        ShowReceipt(txn, g.accounts[senderIdx]);
         break;
     }
 
@@ -3138,6 +3293,9 @@ static void HandleCommand(int id) {
 }
 
 static void GoToScreen(Screen scr) {
+    // Close any open receipt overlay when navigating
+    gShowReceipt = false;
+
     g.screen = scr;
     g.statusMsg.clear();
     if (scr == SCR_ADMIN_TXNS || scr == SCR_ADMIN_SEARCH_TXN) {
