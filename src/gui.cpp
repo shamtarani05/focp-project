@@ -606,14 +606,22 @@ static void ShowReceipt(const Transaction& txn, const Account& acc) {
     gLastAccName = acc.name;
     gShowReceipt = true;
 
-    // Create close button centered at bottom of receipt
+    // Hide existing controls so they don't show under the overlay
+    ClearControls();
+
+    // Create close button centered at bottom of receipt card
     if (gHwnd) {
         RECT rc;
         GetClientRect(gHwnd, &rc);
-        int cx = (rc.right - rc.left) / 2;
-        int cy = (rc.bottom - rc.top) / 2;
-        int cardY = cy - 190; // ch/2 = 380/2 = 190
-        MakeBtn(BTN_CLOSE_RECEIPT, "Close Receipt", cx - 70, cardY + 380 - 45, 140, 38, Primary);
+        // Match the positioning from PaintReceiptOverlay
+        int cw = 420, ch = 420;
+        int contentWidth = rc.right - SIDEBAR_W;
+        int contentHeight = rc.bottom - HEADER_H - STATUS_H;
+        int cx = SIDEBAR_W + contentWidth / 2;
+        int cy = HEADER_H + contentHeight / 2;
+        int cardY = cy - ch / 2;
+        // Button at bottom of card
+        MakeBtn(BTN_CLOSE_RECEIPT, "Close Receipt", cx - 70, cardY + ch - 50, 140, 40, Primary);
     }
 
     if (gHwnd) InvalidateRect(gHwnd, NULL, TRUE);
@@ -1847,103 +1855,107 @@ static void PaintOTPScreen(HDC hdc, RECT rc) {
 static void PaintReceiptOverlay(HDC hdc, RECT rc) {
     if (!gShowReceipt) return;
 
-    // Semi-transparent dark overlay
-    HBRUSH overlayBr = CreateSolidBrush(RGB(0, 0, 0));
-    RECT overlayRc = rc;
-    // Windows GDI doesn't support alpha, so we use a darker shade
+    // Dark overlay covering the content area (not sidebar/header)
+    HBRUSH overlayBr = CreateSolidBrush(RGB(30, 30, 30));
+    RECT overlayRc = {SIDEBAR_W, HEADER_H, rc.right, rc.bottom - STATUS_H};
+    FillRect(hdc, &overlayRc, overlayBr);
+    DeleteObject(overlayBr);
+
     SetBkMode(hdc, TRANSPARENT);
 
-    // Draw receipt card in center
-    int cw = 420, ch = 380;
-    int cx = (rc.right - rc.left) / 2;
-    int cy = (rc.bottom - rc.top) / 2;
-    int cardX = cx - cw/2;
-    int cardY = cy - ch/2;
+    // Calculate card position - center in content area (excluding sidebar)
+    int cw = 420, ch = 420;
+    int contentWidth = rc.right - SIDEBAR_W;
+    int contentHeight = rc.bottom - HEADER_H - STATUS_H;
+    int cx = SIDEBAR_W + contentWidth / 2;
+    int cy = HEADER_H + contentHeight / 2;
+    int cardX = cx - cw / 2;
+    int cardY = cy - ch / 2;
 
     // Card shadow
     HBRUSH shadowBr = CreateSolidBrush(RGB(0, 0, 0));
-    RECT shadowRc = {cardX + 4, cardY + 4, cardX + cw + 4, cardY + ch + 4};
+    RECT shadowRc = {cardX + 6, cardY + 6, cardX + cw + 6, cardY + ch + 6};
     FillRect(hdc, &shadowRc, shadowBr);
     DeleteObject(shadowBr);
 
-    // White card background
+    // White card background with border
     HBRUSH cardBr = CreateSolidBrush(RGB(255, 255, 255));
-    RECT cardRc = {cardX, cardY, cardX + cw, cardY + ch};
-    FillRect(hdc, &cardRc, cardBr);
+    HPEN borderPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
+    HPEN oldPen = (HPEN)SelectObject(hdc, borderPen);
+    HBRUSH oldBr = (HBRUSH)SelectObject(hdc, cardBr);
+    RoundRect(hdc, cardX, cardY, cardX + cw, cardY + ch, 16, 16);
+    SelectObject(hdc, oldPen);
+    SelectObject(hdc, oldBr);
     DeleteObject(cardBr);
+    DeleteObject(borderPen);
 
     // Green header bar
     HBRUSH headerBr = CreateSolidBrush(Success);
-    RECT headerRc = {cardX, cardY, cardX + cw, cardY + 60};
+    RECT headerRc = {cardX + 1, cardY + 1, cardX + cw - 1, cardY + 65};
     FillRect(hdc, &headerRc, headerBr);
     DeleteObject(headerBr);
 
     // Receipt title
-    SetTextColor(hdc, RGB(255, 255, 255));
-    TxtCenter(hdc, "Transaction Receipt", cardX, cardY + 10, cw, 24, hFontHeading, RGB(255,255,255));
-    TxtCenter(hdc, "National Bank ATM", cardX, cardY + 36, cw, 16, hFontSmall, RGB(220,255,220));
+    TxtCenter(hdc, "Transaction Receipt", cardX, cardY + 15, cw, 26, hFontHeading, RGB(255, 255, 255));
+    TxtCenter(hdc, "National Bank ATM", cardX, cardY + 42, cw, 18, hFontSmall, RGB(220, 255, 220));
 
-    // Transaction details
-    int y = cardY + 75;
-    int lx = cardX + 25;
-    int vx = cardX + 180;
-    int lineH = 32;
+    // Transaction details - properly aligned
+    int y = cardY + 85;
+    int lx = cardX + 30;           // Label X position
+    int vx = cardX + 150;          // Value X position
+    int lineH = 38;
 
-    SetTextColor(hdc, Text);
-
-    // Transaction type icon and label
+    // Transaction type
     string txnTypeLabel = "Transaction";
     COLORREF typeClr = Text;
     if (gLastTxn.type == "withdrawal") { txnTypeLabel = "Cash Withdrawal"; typeClr = Error; }
     else if (gLastTxn.type == "deposit") { txnTypeLabel = "Cash Deposit"; typeClr = Success; }
     else if (gLastTxn.type == "transfer") { txnTypeLabel = "Fund Transfer"; typeClr = Secondary; }
 
-    Txt(hdc, "Type:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, "Type:", lx, y, hFontBold, TextLight);
     Txt(hdc, txnTypeLabel.c_str(), vx, y, hFontBold, typeClr);
     y += lineH;
 
-    Txt(hdc, "Transaction ID:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, "Txn ID:", lx, y, hFontBold, TextLight);
     Txt(hdc, gLastTxn.transactionID.c_str(), vx, y, hFontMono, Text);
     y += lineH;
 
-    Txt(hdc, "Account:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, "Account:", lx, y, hFontBold, TextLight);
     string accStr = to_string(gLastAccNo) + " - " + gLastAccName;
     Txt(hdc, accStr.c_str(), vx, y, hFontNormal, Text);
     y += lineH;
 
-    Txt(hdc, "Amount:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, "Amount:", lx, y, hFontBold, TextLight);
     stringstream amtSs;
     amtSs << "Rs. " << fixed << setprecision(2) << gLastTxn.amount;
     Txt(hdc, amtSs.str().c_str(), vx, y, hFontHeading, typeClr);
-    y += lineH + 5;
+    y += lineH;
 
-    Txt(hdc, "Balance:", lx, y, hFontSmall, TextLight);
+    Txt(hdc, "Balance:", lx, y, hFontBold, TextLight);
     stringstream balSs;
     balSs << "Rs. " << fixed << setprecision(2) << gLastTxn.resultingBalance;
     Txt(hdc, balSs.str().c_str(), vx, y, hFontBold, Success);
     y += lineH;
 
-    Txt(hdc, "Date/Time:", lx, y, hFontSmall, TextLight);
-    Txt(hdc, gLastTxn.dateTime.c_str(), vx, y, hFontSmall, TextLight);
+    Txt(hdc, "Date/Time:", lx, y, hFontBold, TextLight);
+    Txt(hdc, gLastTxn.dateTime.c_str(), vx, y, hFontNormal, TextLight);
     y += lineH;
 
     if (!gLastTxn.details.empty()) {
-        Txt(hdc, "Details:", lx, y, hFontSmall, TextLight);
-        Txt(hdc, gLastTxn.details.c_str(), vx, y, hFontSmall, TextLight);
+        Txt(hdc, "Details:", lx, y, hFontBold, TextLight);
+        Txt(hdc, gLastTxn.details.c_str(), vx, y, hFontNormal, TextLight);
     }
 
     // Separator line
     HPEN sepPen = CreatePen(PS_SOLID, 1, RGB(220, 220, 220));
-    HPEN oldPen = (HPEN)SelectObject(hdc, sepPen);
-    MoveToEx(hdc, cardX + 20, cardY + ch - 65, NULL);
-    LineTo(hdc, cardX + cw - 20, cardY + ch - 65);
+    oldPen = (HPEN)SelectObject(hdc, sepPen);
+    MoveToEx(hdc, cardX + 25, cardY + ch - 70, NULL);
+    LineTo(hdc, cardX + cw - 25, cardY + ch - 70);
     SelectObject(hdc, oldPen);
     DeleteObject(sepPen);
 
     // Footer message
-    TxtCenter(hdc, "Thank you for banking with us!", cardX, cardY + ch - 55, cw, 18, hFontSmall, TextLight);
-
-    DeleteObject(overlayBr);
+    TxtCenter(hdc, "Thank you for banking with us!", cardX, cardY + ch - 60, cw, 20, hFontSmall, TextLight);
 }
 
 // ============================
