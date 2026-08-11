@@ -105,18 +105,8 @@ vector<Transaction> filterTransactions(const vector<Transaction>& transactions,
                                        int accountNo, const string& type,
                                        const string& startDate, const string& endDate,
                                        double minAmount, double maxAmount) {
-    vector<Transaction> result;
-    for (const auto& t : transactions) {
-        bool ok = true;
-        if (accountNo != -1 && t.accountNo != accountNo) ok = false;
-        if (!type.empty() && t.type != type) ok = false;
-        if (!startDate.empty() && t.dateTime.substr(0, 10) < startDate) ok = false;
-        if (!endDate.empty() && t.dateTime.substr(0, 10) > endDate) ok = false;
-        if (minAmount >= 0 && t.amount < minAmount) ok = false;
-        if (maxAmount >= 0 && t.amount > maxAmount) ok = false;
-        if (ok) result.push_back(t);
-    }
-    return result;
+    TransactionManager manager(transactions);
+    return manager.filter(accountNo, type, startDate, endDate, minAmount, maxAmount);
 }
 
 int getNextAccountNo(const vector<Account>& accounts) {

@@ -20,8 +20,38 @@ struct Account {
     string lastWithdrawalDate;
     string creationDate;
 
+    // Default & Parameterized Constructors (OOP Concept)
     Account() : accountNo(0), balance(0), status("active"),
                 pinAttempts(0), dailyWithdrawn(0) {}
+
+    Account(int accNo, string n, string c, string type, double bal)
+        : accountNo(accNo), name(n), cnic(c), accountType(type), balance(bal),
+          status("active"), pinAttempts(0), dailyWithdrawn(0) {}
+
+    // OOP Member Functions
+    bool isActive() const { return status == "active"; }
+    bool isFrozen() const { return status == "frozen"; }
+    bool isLocked() const { return status == "locked"; }
+
+    bool canWithdraw(double amount) const {
+        return isActive() && amount > 0 && balance >= amount;
+    }
+
+    void deposit(double amount) {
+        if (amount > 0) balance += amount;
+    }
+
+    bool withdraw(double amount) {
+        if (canWithdraw(amount)) {
+            balance -= amount;
+            dailyWithdrawn += amount;
+            return true;
+        }
+        return false;
+    }
+
+    void resetPinAttempts() { pinAttempts = 0; }
+    void incrementPinAttempts() { pinAttempts++; }
 };
 
 struct Transaction {
@@ -33,7 +63,29 @@ struct Transaction {
     double resultingBalance;
     string details;
 
+    // Default & Parameterized Constructors (OOP Concept)
     Transaction() : accountNo(0), amount(0), resultingBalance(0) {}
+
+    Transaction(string id, int accNo, string t, double amt, string dt, double resBal, string det = "")
+        : transactionID(id), accountNo(accNo), type(t), amount(amt),
+          dateTime(dt), resultingBalance(resBal), details(det) {}
+
+    // OOP Member Functions
+    bool isDeposit() const { return type == "deposit"; }
+    bool isWithdrawal() const { return type == "withdrawal"; }
+    bool isTransfer() const { return type == "transfer"; }
+
+    bool matchesFilter(int filterAcc, const string& filterType,
+                       const string& startDate, const string& endDate,
+                       double minAmt, double maxAmt) const {
+        if (filterAcc != -1 && accountNo != filterAcc) return false;
+        if (!filterType.empty() && type != filterType) return false;
+        if (!startDate.empty() && dateTime.substr(0, 10) < startDate) return false;
+        if (!endDate.empty() && dateTime.substr(0, 10) > endDate) return false;
+        if (minAmt >= 0 && amount < minAmt) return false;
+        if (maxAmt >= 0 && amount > maxAmt) return false;
+        return true;
+    }
 };
 
 struct Loan {
@@ -48,8 +100,23 @@ struct Loan {
     double remainingAmount;
     int monthsPaid;
 
+    // Constructors
     Loan() : loanId(0), accountNo(0), amount(0), interestRate(5.0),
              termMonths(0), monthlyPayment(0), remainingAmount(0), monthsPaid(0) {}
+
+    Loan(int id, int accNo, double amt, int term, double rate = 5.0)
+        : loanId(id), accountNo(accNo), amount(amt), interestRate(rate),
+          termMonths(term), remainingAmount(amt), monthsPaid(0), status("pending") {
+        monthlyPayment = (term > 0) ? (amt * (1 + rate * term / 1200.0)) / term : 0;
+    }
+
+    // OOP Member Functions
+    bool isApproved() const { return status == "approved" || status == "active"; }
+    bool isPending() const { return status == "pending"; }
+    
+    double calculateTotalRepayment() const {
+        return amount * (1.0 + interestRate * termMonths / 1200.0);
+    }
 };
 
 struct CashNote {
@@ -58,6 +125,8 @@ struct CashNote {
 
     CashNote() : denomination(0), count(0) {}
     CashNote(int d, int c) : denomination(d), count(c) {}
+
+    double totalValue() const { return denomination * count; }
 };
 
 struct AuditEntry {
@@ -79,6 +148,43 @@ struct ReactivationRequest {
     string status;  // pending / approved / rejected
 
     ReactivationRequest() : requestId(0), accountNo(0), status("pending") {}
+    ReactivationRequest(int reqId, int accNo, string n, string c, string r, string dt)
+        : requestId(reqId), accountNo(accNo), name(n), cnic(c), reason(r), dateTime(dt), status("pending") {}
+
+    bool isPending() const { return status == "pending"; }
+    bool isApproved() const { return status == "approved"; }
+};
+
+// --- OOP Class Definitions for Core Banking Services ---
+
+// Class demonstrating Encapsulation (Private Data Members, Public Member Methods)
+class TransactionManager {
+private:
+    vector<Transaction> transactions;
+
+public:
+    TransactionManager() {}
+    TransactionManager(const vector<Transaction>& txns) : transactions(txns) {}
+
+    void setTransactions(const vector<Transaction>& txns) {
+        transactions = txns;
+    }
+
+    const vector<Transaction>& getTransactions() const {
+        return transactions;
+    }
+
+    vector<Transaction> filter(int accountNo, const string& type,
+                               const string& startDate, const string& endDate,
+                               double minAmount, double maxAmount) const {
+        vector<Transaction> result;
+        for (const auto& t : transactions) {
+            if (t.matchesFilter(accountNo, type, startDate, endDate, minAmount, maxAmount)) {
+                result.push_back(t);
+            }
+        }
+        return result;
+    }
 };
 
 const string DATA_DIR   = "data";
