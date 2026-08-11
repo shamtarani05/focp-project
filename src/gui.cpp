@@ -11,7 +11,7 @@
 
 using namespace Theme;
 
-const string ADMIN_PASSWORD = "SAA@Bank#2026!";
+const string ADMIN_PASSWORD = "SAA@Bank#2026";
 
 // ============================
 // VOICE ASSISTANT
@@ -292,7 +292,6 @@ static const SidebarItem sidebarItems[] = {
     {"Unfreeze Acct",   SCR_ADMIN_UNFREEZE,   true},
     {"Unlock Account",  SCR_ADMIN_UNLOCK,     true},
     {"Transactions",    SCR_ADMIN_TXNS,       true},
-    {"Search Txns",     SCR_ADMIN_SEARCH_TXN, true},
     {"Audit Log",       SCR_ADMIN_AUDIT,      true},
     {"Loans",           SCR_ADMIN_LOANS,      true},
     {"Cash Inventory",  SCR_ADMIN_CASH,       true},
@@ -332,8 +331,8 @@ static void DrawSidebar(HDC hdc, RECT rc, AppState& s) {
     int yStart = HEADER_H + 42;
     int itemH = 38;
 
-    int startIdx = s.isAdmin ? 0 : 15;
-    int count = s.isAdmin ? 14 : (NUM_SIDEBAR_ITEMS - 15);
+    int startIdx = s.isAdmin ? 0 : 14;
+    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
 
     for (int i = 0; i < count; i++) {
         int idx = startIdx + i;
@@ -381,8 +380,8 @@ static int SidebarHitTest(LPARAM lp, AppState& s) {
     int yStart = HEADER_H + 42;
     int itemH = 38;
 
-    int startIdx = s.isAdmin ? 0 : 15;
-    int count = s.isAdmin ? 14 : (NUM_SIDEBAR_ITEMS - 15);
+    int startIdx = s.isAdmin ? 0 : 14;
+    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
 
     for (int i = 0; i < count; i++) {
         int y = yStart + i * itemH;
@@ -606,6 +605,15 @@ static string GetEditText(int id) {
         }
     }
     return "";
+}
+
+static void SetEditText(int id, const string& txt) {
+    for (auto& e : gEdits) {
+        if (e.id == id) {
+            SetWindowText(e.hwnd, txt.c_str());
+            return;
+        }
+    }
 }
 
 static void SetStatus(const string& msg, int type) {
@@ -1502,21 +1510,38 @@ static void PaintAdminRequests(HDC hdc, RECT rc) {
 
 static void PaintAdminTxns(HDC hdc, RECT rc) {
     int sx = SIDEBAR_W + 25;
-    int sy = HEADER_H + 25;
+    int sy = HEADER_H + 20;
     int cw = rc.right - SIDEBAR_W - 50;
-    int ch = rc.bottom - HEADER_H - STATUS_H - 50;
+    int ch = rc.bottom - HEADER_H - STATUS_H - 35;
 
     Txt(hdc, "Transaction History", sx, sy, hFontHeading, Primary);
+    Txt(hdc, "Filter and view complete transaction log", sx, sy + 25, hFontSmall, TextLight);
     HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
     HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 28, NULL);
-    LineTo(hdc, sx + 220, sy + 28);
+    MoveToEx(hdc, sx, sy + 44, NULL);
+    LineTo(hdc, sx + 220, sy + 44);
     SelectObject(hdc, old);
     DeleteObject(linePen);
 
-    DrawCard(hdc, sx, sy + 45, cw, ch - 55);
+    // 1. Search / Filter Card (Top)
+    int fY = sy + 52;
+    int filterH = 145;
+    DrawCard(hdc, sx, fY, cw, filterH);
 
-    RECT tblHdr = {sx + 10, sy + 50, sx + cw - 10, sy + 78};
+    int col1X = sx + 20, col2X = sx + cw/2 + 10;
+    Txt(hdc, "Account #:",  col1X, fY + 20, hFontBold, TextLight);
+    Txt(hdc, "Type:",       col2X, fY + 20, hFontBold, TextLight);
+    Txt(hdc, "From Date:",  col1X, fY + 60, hFontBold, TextLight);
+    Txt(hdc, "To Date:",    col2X, fY + 60, hFontBold, TextLight);
+    Txt(hdc, "Min Amount:", col1X, fY + 100, hFontBold, TextLight);
+    Txt(hdc, "Max Amount:", col2X, fY + 100, hFontBold, TextLight);
+
+    // 2. Transaction Results Card (Bottom)
+    int tableY = fY + filterH + 15;
+    int tableH = max(200, ch - (tableY - sy));
+    DrawCard(hdc, sx, tableY, cw, tableH);
+
+    RECT tblHdr = {sx + 10, tableY + 10, sx + cw - 10, tableY + 38};
     HBRUSH tblHdrBr = CreateSolidBrush(RGB(240,243,248));
     FillRect(hdc, &tblHdr, tblHdrBr);
     DeleteObject(tblHdrBr);
@@ -1524,67 +1549,43 @@ static void PaintAdminTxns(HDC hdc, RECT rc) {
     int colX[] = {sx+15, sx+120, sx+240, sx+370, sx+500, sx+620};
     const char* colH[] = {"ID", "Account", "Type", "Amount", "Date", "Balance"};
     for (int i = 0; i < 6; i++)
-        Txt(hdc, colH[i], colX[i], sy + 57, hFontBold, TextLight);
+        Txt(hdc, colH[i], colX[i], tableY + 16, hFontBold, TextLight);
 
-    int rowY = sy + 85;
-    int shown = min((int)g.transactions.size(), 20);
-    for (int i = shown - 1; i >= 0; i--) {
-        if (rowY > sy + ch - 30) break;
-        auto& t = g.transactions[i];
-        Txt(hdc, t.transactionID.c_str(), colX[0], rowY, hFontMono, Text);
-        Txt(hdc, to_string(t.accountNo).c_str(), colX[1], rowY, hFontNormal, Text);
-        Txt(hdc, t.type.c_str(), colX[2], rowY, hFontNormal, Text);
+    int rowY = tableY + 45;
+    if (g.transactions.empty()) {
+        Txt(hdc, "No transactions found matching criteria.", sx + 20, rowY + 5, hFontNormal, TextLight);
+    } else {
+        int shown = min((int)g.transactions.size(), 30);
+        for (int i = (int)g.transactions.size() - 1; i >= 0 && i >= (int)g.transactions.size() - shown; i--) {
+            if (rowY > tableY + tableH - 30) break;
+            auto& t = g.transactions[i];
+            Txt(hdc, t.transactionID.c_str(), colX[0], rowY, hFontMono, Text);
+            Txt(hdc, to_string(t.accountNo).c_str(), colX[1], rowY, hFontNormal, Text);
+            Txt(hdc, t.type.c_str(), colX[2], rowY, hFontNormal, Text);
 
-        stringstream ss;
-        ss << "Rs. " << fixed << setprecision(2) << t.amount;
-        COLORREF clr = (t.type=="deposit") ? Success : (t.type=="withdrawal" ? Error : Secondary);
-        Txt(hdc, ss.str().c_str(), colX[3], rowY, hFontNormal, clr);
-        Txt(hdc, t.dateTime.substr(0,10).c_str(), colX[4], rowY, hFontSmall, TextLight);
+            stringstream ss;
+            ss << "Rs. " << fixed << setprecision(2) << t.amount;
+            COLORREF clr = (t.type=="deposit") ? Success : (t.type=="withdrawal" ? Error : Secondary);
+            Txt(hdc, ss.str().c_str(), colX[3], rowY, hFontNormal, clr);
+            Txt(hdc, t.dateTime.substr(0,10).c_str(), colX[4], rowY, hFontSmall, TextLight);
 
-        stringstream bs;
-        bs << "Rs. " << fixed << setprecision(2) << t.resultingBalance;
-        Txt(hdc, bs.str().c_str(), colX[5], rowY, hFontNormal, Text);
-        rowY += 25;
+            stringstream bs;
+            bs << "Rs. " << fixed << setprecision(2) << t.resultingBalance;
+            Txt(hdc, bs.str().c_str(), colX[5], rowY, hFontNormal, Text);
+            rowY += 25;
 
-        HPEN sepPen = CreatePen(PS_SOLID, 1, RGB(235,240,248));
-        HPEN oldSep = (HPEN)SelectObject(hdc, sepPen);
-        MoveToEx(hdc, sx+15, rowY-3, NULL);
-        LineTo(hdc, sx+cw-15, rowY-3);
-        SelectObject(hdc, oldSep);
-        DeleteObject(sepPen);
+            HPEN sepPen = CreatePen(PS_SOLID, 1, RGB(235,240,248));
+            HPEN oldSep = (HPEN)SelectObject(hdc, sepPen);
+            MoveToEx(hdc, sx+15, rowY-3, NULL);
+            LineTo(hdc, sx+cw-15, rowY-3);
+            SelectObject(hdc, oldSep);
+            DeleteObject(sepPen);
+        }
     }
 }
 
 static void PaintAdminSearchTxn(HDC hdc, RECT rc) {
-    int sx = SIDEBAR_W + 30;
-    int sy = HEADER_H + 25;
-    int cw = rc.right - SIDEBAR_W - 60;
-    int ch = rc.bottom - HEADER_H - STATUS_H - 50;
-
-    Txt(hdc, "Search Transactions", sx, sy, hFontHeading, Primary);
-    Txt(hdc, "Filter the transaction log by account, type, date or amount", sx, sy + 28, hFontSmall, TextLight);
-    HPEN linePen = CreatePen(PS_SOLID, 2, Accent);
-    HPEN old = (HPEN)SelectObject(hdc, linePen);
-    MoveToEx(hdc, sx, sy + 46, NULL);
-    LineTo(hdc, sx + 240, sy + 46);
-    SelectObject(hdc, old);
-    DeleteObject(linePen);
-
-    // Filter card
-    DrawCard(hdc, sx, sy + 58, cw, 160);
-    int fY = sy + 58;
-    int col1X = sx + 20, col2X = sx + cw/2 + 10;
-    int col1V = sx + 130, col2V = sx + cw/2 + 120;
-    Txt(hdc, "Account #:",  col1X, fY + 25, hFontBold, TextLight);
-    Txt(hdc, "Type:",       col2X, fY + 25, hFontBold, TextLight);
-    Txt(hdc, "From Date:",  col1X, fY + 75, hFontBold, TextLight);
-    Txt(hdc, "To Date:",    col2X, fY + 75, hFontBold, TextLight);
-    Txt(hdc, "Min Amount:", col1X, fY + 125, hFontBold, TextLight);
-    Txt(hdc, "Max Amount:", col2X, fY + 125, hFontBold, TextLight);
-
-    // Results card
-    int resY = sy + 235;
-    DrawCard(hdc, sx, resY, cw, ch - resY + HEADER_H + 15);
+    PaintAdminTxns(hdc, rc);
 }
 
 static void PaintAdminAudit(HDC hdc, RECT rc) {
@@ -1981,19 +1982,19 @@ static void CreateScreenControls() {
         MakeBtn(BTN_DO_UNLOCK, "Unlock Account", sx + 185, cardY + 75, 150, 40, Warning);
         break;
     }
-    case SCR_ADMIN_TXNS: break;
+    case SCR_ADMIN_TXNS:
     case SCR_ADMIN_SEARCH_TXN: {
-        int cw = rc.right - SIDEBAR_W - 60;
-        int fY = sy + 58;
-        int col1X = sx + 20, col2X = sx + cw/2 + 10;
-        int col1V = sx + 130, col2V = sx + cw/2 + 120;
-        MakeEdit(EDT_SEARCH_TXN_ACC,  col1V, fY + 18, 140, 32);
-        MakeEdit(EDT_SEARCH_TXN_TYPE, col2V, fY + 18, 140, 32);
-        MakeEdit(EDT_SEARCH_TXN_FROM, col1V, fY + 68, 140, 32);
-        MakeEdit(EDT_SEARCH_TXN_TO,   col2V, fY + 68, 140, 32);
-        MakeEdit(EDT_SEARCH_TXN_MIN,  col1V, fY + 118, 100, 32);
-        MakeEdit(EDT_SEARCH_TXN_MAX,  col2V, fY + 118, 100, 32);
-        MakeBtn(BTN_DO_SEARCH_TXN, "Search", sx + cw - 145, fY + 115, 125, 36, Primary);
+        int cw = rc.right - SIDEBAR_W - 50;
+        int fY = sy + 52;
+        int col1V = sx + 120, col2V = sx + cw/2 + 110;
+        MakeEdit(EDT_SEARCH_TXN_ACC,  col1V, fY + 14, 140, 30);
+        MakeEdit(EDT_SEARCH_TXN_TYPE, col2V, fY + 14, 140, 30);
+        MakeEdit(EDT_SEARCH_TXN_FROM, col1V, fY + 54, 140, 30);
+        MakeEdit(EDT_SEARCH_TXN_TO,   col2V, fY + 54, 140, 30);
+        MakeEdit(EDT_SEARCH_TXN_MIN,  col1V, fY + 94, 110, 30);
+        MakeEdit(EDT_SEARCH_TXN_MAX,  col2V, fY + 94, 110, 30);
+        MakeBtn(BTN_DO_SEARCH_TXN, "Search", sx + cw - 240, fY + 93, 105, 32, Primary);
+        MakeBtn(BTN_CLEAR_SEARCH,  "Reset",  sx + cw - 125, fY + 93, 105, 32, RGB(100,116,139));
         break;
     }
     case SCR_ADMIN_AUDIT: break;
@@ -2705,6 +2706,20 @@ static void HandleCommand(int id) {
         stringstream ss;
         ss << "Found " << g.transactions.size() << " matching transactions";
         SetStatus(ss.str(), 1);
+        if (gHwnd) InvalidateRect(gHwnd, NULL, TRUE);
+        break;
+    }
+
+    case BTN_CLEAR_SEARCH: {
+        SetEditText(EDT_SEARCH_TXN_ACC, "");
+        SetEditText(EDT_SEARCH_TXN_TYPE, "");
+        SetEditText(EDT_SEARCH_TXN_FROM, "");
+        SetEditText(EDT_SEARCH_TXN_TO, "");
+        SetEditText(EDT_SEARCH_TXN_MIN, "");
+        SetEditText(EDT_SEARCH_TXN_MAX, "");
+        loadTransactions(g.transactions);
+        SetStatus("Transaction search filters cleared", 1);
+        if (gHwnd) InvalidateRect(gHwnd, NULL, TRUE);
         break;
     }
 
@@ -3000,6 +3015,9 @@ static void HandleCommand(int id) {
 static void GoToScreen(Screen scr) {
     g.screen = scr;
     g.statusMsg.clear();
+    if (scr == SCR_ADMIN_TXNS || scr == SCR_ADMIN_SEARCH_TXN) {
+        loadTransactions(g.transactions);
+    }
     // Keep reactivation request list fresh for the notification badge
     // and reload fully when admin opens the requests screen
     if (g.isAdmin && scr != SCR_LOGIN && scr != SCR_ATM_LOGIN) {
