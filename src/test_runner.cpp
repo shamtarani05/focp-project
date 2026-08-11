@@ -48,7 +48,10 @@ int main() {
     assert(isValidAccountType("savings") == true);
     assert(isValidAccountType("invalid_type") == false);
     assert(isMultipleOf100(500.0) == true);
-    assert(isMultipleOf100(550.0) == false);
+    assert(isMultipleOf500(500.0) == true);
+    assert(isMultipleOf500(1500.0) == true);
+    assert(isMultipleOf500(250.0) == false);
+    assert(isMultipleOf500(750.0) == false);
     cout << " -> Validation routines passed." << endl;
 
     // 4. Transaction & Receipt

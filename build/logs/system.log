@@ -180,3 +180,85 @@
 [2026-08-11 16:08:21] [AUDIT] Navigation: Sidebar -> Apply Loan
 [2026-08-11 16:08:23] [AUDIT] Navigation: Sidebar -> ATM Info
 [2026-08-11 16:08:24] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:32:17] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 16:32:23] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:32:24] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:32:34] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:32:37] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:33:18] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 16:33:35] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:33:44] [AUDIT] Navigation: Sidebar -> Cash Inventory
+[2026-08-11 16:33:45] [AUDIT] Navigation: Sidebar -> Daily Report
+[2026-08-11 16:33:47] [AUDIT] Navigation: Sidebar -> Cash Inventory
+[2026-08-11 16:33:48] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:34:23] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:39:40] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 16:39:51] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:45:28] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 16:45:38] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:45:43] [AUDIT] Loan Approved: Loan ID #4 approved for account 1002
+[2026-08-11 16:46:02] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 16:46:07] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:46:11] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:46:16] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:46:34] [AUDIT] Loan Repayment: Account 1002 paid Rs. 1000.000000 towards Loan #4
+[2026-08-11 16:46:38] [AUDIT] Navigation: Sidebar -> Mini Statement
+[2026-08-11 16:46:39] [AUDIT] Navigation: Sidebar -> Change PIN
+[2026-08-11 16:46:40] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:46:41] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:46:42] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:46:44] [AUDIT] Navigation: Sidebar -> Change PIN
+[2026-08-11 16:47:20] [AUDIT] PIN Changed: Account 1002 PIN changed
+[2026-08-11 16:47:22] [AUDIT] Navigation: Sidebar -> ATM Info
+[2026-08-11 16:47:23] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:51:34] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 16:51:41] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:51:42] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:51:42] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:52:02] [AUDIT] Loan Application: Account 1002 requested loan #5 of Rs. 50000.000000
+[2026-08-11 16:52:17] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:52:18] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:52:28] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 16:52:30] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:52:35] [AUDIT] Navigation: Sidebar -> ATM Info
+[2026-08-11 16:52:38] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:52:39] [AUDIT] Navigation: Sidebar -> ATM Info
+[2026-08-11 16:52:46] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:52:57] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:53:07] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 16:53:13] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:53:14] [AUDIT] Navigation: Sidebar -> Daily Report
+[2026-08-11 16:53:16] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:54:20] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 16:54:29] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 16:54:35] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 16:54:41] [AUDIT] Navigation: Sidebar -> Withdraw
+[2026-08-11 16:54:50] [AUDIT] Navigation: Sidebar -> ATM Balance
+[2026-08-11 16:55:58] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 16:55:59] [AUDIT] Navigation: Sidebar -> Withdraw
+[2026-08-11 16:56:03] [AUDIT] Withdrawal: Account 1002 withdrew Rs. 5000.000000
+[2026-08-11 16:56:07] [AUDIT] Navigation: Sidebar -> ATM Balance
+[2026-08-11 16:56:19] [AUDIT] Navigation: Sidebar -> Mini Statement
+[2026-08-11 16:57:07] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 16:57:13] [AUDIT] Navigation: Sidebar -> Mini Statement
+[2026-08-11 16:57:41] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 16:57:48] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 16:58:34] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 16:58:38] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 17:01:14] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 17:01:18] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 17:01:59] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 17:02:02] [AUDIT] Navigation: Sidebar -> ATM Info
+[2026-08-11 17:11:48] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 17:11:54] [AUDIT] Navigation: Sidebar -> Deposit
+[2026-08-11 17:11:56] [AUDIT] Navigation: Sidebar -> Withdraw
+[2026-08-11 17:12:09] [AUDIT] Navigation: Sidebar -> Transfer
+[2026-08-11 17:12:30] [AUDIT] Transfer (OTP): Account 1002 transferred Rs. 50000.000000 to 1001
+[2026-08-11 17:12:32] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 17:12:53] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 17:12:55] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 17:15:54] [AUDIT] Admin Login: Administrator logged in
+[2026-08-11 17:15:56] [AUDIT] Navigation: Sidebar -> Loans
+[2026-08-11 17:16:01] [AUDIT] Loan Rejected: Loan ID #5 rejected for account 1002
+[2026-08-11 17:16:10] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 17:16:20] [AUDIT] Navigation: Sidebar -> Apply Loan
