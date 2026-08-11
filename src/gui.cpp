@@ -7,9 +7,16 @@
 #include <iomanip>
 #include <algorithm>
 #include <cmath>
+
+// Check if SAPI is available (MSVC with Windows SDK)
+#if defined(_MSC_VER) || defined(HAS_SAPI)
+#define USE_SAPI 1
 #include <initguid.h>
 #include <sapi.h>
 #include <ole2.h>
+#else
+#define USE_SAPI 0
+#endif
 
 
 using namespace Theme;
@@ -19,6 +26,7 @@ const string ADMIN_PASSWORD = "SAA@Bank#2026";
 // ============================
 // VOICE ASSISTANT (Native Windows SAPI)
 // ============================
+#if USE_SAPI
 static ISpVoice* g_pVoice = NULL;
 static bool g_voiceInit = false;
 
@@ -52,6 +60,12 @@ static void SpeakText(const string& text) {
         }
     }
 }
+#else
+// Stub implementations when SAPI is not available (MinGW)
+static void InitVoice() {}
+static void StopCurrentSpeech() {}
+static void SpeakText(const string& text) { (void)text; }
+#endif
 
 static string ScreenGuide(Screen screen) {
     switch (screen) {
