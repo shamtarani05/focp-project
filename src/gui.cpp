@@ -139,7 +139,7 @@ enum BtnID {
     BTN_ADMIN_CASH, BTN_ADMIN_DAILY,
     BTN_ATM_DEPOSIT, BTN_ATM_WITHDRAW, BTN_ATM_TRANSFER,
     BTN_ATM_BALANCE, BTN_ATM_MINISTATE, BTN_ATM_CHANGEPIN,
-    BTN_ATM_INFO, BTN_BACK,
+    BTN_ATM_INFO, BTN_ATM_PAY_LOAN, BTN_ATM_APPLY_LOAN, BTN_BACK,
     BTN_DO_CREATE, BTN_DO_LOGIN, BTN_DO_ADMIN_LOGIN,
     BTN_DO_SEARCH, BTN_DO_FREEZE, BTN_DO_UNFREEZE, BTN_DO_UNLOCK,
     BTN_DO_DEPOSIT, BTN_DO_WITHDRAW, BTN_DO_TRANSFER, BTN_DO_CHANGEPIN,
@@ -1994,7 +1994,7 @@ static void CreateScreenControls() {
     }
     case SCR_ADMIN_CASH: break;
     case SCR_ADMIN_DAILY: break;
-    case SCR_ATM_MENU: break;
+    case SCR_ATM_MENU: break; // Card clicks handled in WM_LBUTTONDOWN
     case SCR_ATM_BALANCE: break;
     case SCR_ATM_DEPOSIT: {
         int cardY = sy + 58;
@@ -3108,6 +3108,32 @@ static void HandleCommand(int id) {
         ClearControls();
         CreateScreenControls();
         break;
+
+    // ATM Menu card buttons
+    case BTN_ATM_BALANCE:
+        GoToScreen(SCR_ATM_BALANCE);
+        break;
+    case BTN_ATM_DEPOSIT:
+        GoToScreen(SCR_ATM_DEPOSIT);
+        break;
+    case BTN_ATM_WITHDRAW:
+        GoToScreen(SCR_ATM_WITHDRAW);
+        break;
+    case BTN_ATM_TRANSFER:
+        GoToScreen(SCR_ATM_TRANSFER);
+        break;
+    case BTN_ATM_MINISTATE:
+        GoToScreen(SCR_ATM_MINISTATE);
+        break;
+    case BTN_ATM_CHANGEPIN:
+        GoToScreen(SCR_ATM_CHANGEPIN);
+        break;
+    case BTN_ATM_PAY_LOAN:
+        GoToScreen(SCR_ATM_REPAY_LOAN);
+        break;
+    case BTN_ATM_APPLY_LOAN:
+        GoToScreen(SCR_ATM_APPLY_LOAN);
+        break;
     }
 }
 
@@ -3285,12 +3311,47 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
 
     case WM_LBUTTONDOWN: {
+        int mx = LOWORD(lp);
+        int my = HIWORD(lp);
+
+        // Sidebar hit test
         int hit = SidebarHitTest(lp, g);
         if (hit >= 0) {
             Screen target = sidebarItems[hit].screen;
             GoToScreen(target);
             logAudit("Navigation", string("Sidebar -> ") + sidebarItems[hit].label);
+            return 0;
         }
+
+        // ATM Menu card hit test
+        if (g.screen == SCR_ATM_MENU) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            int menuSx = SIDEBAR_W + 30;
+            int menuSy = HEADER_H + 30;
+            int cw = rc.right - SIDEBAR_W - 60;
+            int cardW = (cw - 30) / 3;
+            int cardH = 110;
+
+            Screen cardScreens[] = {
+                SCR_ATM_BALANCE, SCR_ATM_DEPOSIT, SCR_ATM_WITHDRAW,
+                SCR_ATM_TRANSFER, SCR_ATM_MINISTATE, SCR_ATM_CHANGEPIN,
+                SCR_ATM_REPAY_LOAN, SCR_ATM_APPLY_LOAN
+            };
+
+            for (int i = 0; i < 8; i++) {
+                int col = i % 3;
+                int row = i / 3;
+                int cx = menuSx + col * (cardW + 15);
+                int cy = menuSy + 80 + row * (cardH + 20);
+
+                if (mx >= cx && mx < cx + cardW && my >= cy && my < cy + cardH) {
+                    GoToScreen(cardScreens[i]);
+                    return 0;
+                }
+            }
+        }
+
         return 0;
     }
 
@@ -3298,7 +3359,34 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         int mx = LOWORD(lp);
         int my = HIWORD(lp);
         bool hasSidebar = (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_ATM_LOGIN && g.screen != SCR_CONTACT_ADMIN);
-        if (hasSidebar && mx < SIDEBAR_W && my > HEADER_H) {
+
+        // Check if over ATM menu cards
+        bool overATMCard = false;
+        if (g.screen == SCR_ATM_MENU) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            int menuSx = SIDEBAR_W + 30;
+            int menuSy = HEADER_H + 30;
+            int cw = rc.right - SIDEBAR_W - 60;
+            int cardW = (cw - 30) / 3;
+            int cardH = 110;
+
+            for (int i = 0; i < 8; i++) {
+                int col = i % 3;
+                int row = i / 3;
+                int cx = menuSx + col * (cardW + 15);
+                int cy = menuSy + 80 + row * (cardH + 20);
+
+                if (mx >= cx && mx < cx + cardW && my >= cy && my < cy + cardH) {
+                    overATMCard = true;
+                    break;
+                }
+            }
+        }
+
+        if (overATMCard) {
+            SetCursor(LoadCursor(NULL, IDC_HAND));
+        } else if (hasSidebar && mx < SIDEBAR_W && my > HEADER_H) {
             int hit = SidebarHitTest(lp, g);
             if (hit != gHoverSidebarIdx) {
                 gHoverSidebarIdx = hit;
@@ -3324,6 +3412,30 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         POINT pt;
         GetCursorPos(&pt);
         ScreenToClient(hwnd, &pt);
+
+        // Check ATM menu cards
+        if (g.screen == SCR_ATM_MENU) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            int menuSx = SIDEBAR_W + 30;
+            int menuSy = HEADER_H + 30;
+            int cw = rc.right - SIDEBAR_W - 60;
+            int cardW = (cw - 30) / 3;
+            int cardH = 110;
+
+            for (int i = 0; i < 8; i++) {
+                int col = i % 3;
+                int row = i / 3;
+                int cx = menuSx + col * (cardW + 15);
+                int cy = menuSy + 80 + row * (cardH + 20);
+
+                if (pt.x >= cx && pt.x < cx + cardW && pt.y >= cy && pt.y < cy + cardH) {
+                    SetCursor(LoadCursor(NULL, IDC_HAND));
+                    return TRUE;
+                }
+            }
+        }
+
         if (pt.x < SIDEBAR_W && pt.y > HEADER_H) {
             SetCursor(LoadCursor(NULL, IDC_HAND));
             return TRUE;
