@@ -905,3 +905,19 @@
 2026-08-12 02:49:03|Navigation|Sidebar -> Daily Report
 2026-08-12 02:49:03|Navigation|Sidebar -> Reactivation Req
 2026-08-12 02:49:05|Navigation|Sidebar -> Daily Report
+2026-08-12 03:27:56|ATM Login|Account 1001 logged in
+2026-08-12 03:27:59|Navigation|Sidebar -> Transfer
+2026-08-12 03:28:21|Transfer|Account 1001 transferred Rs. 20000.000000 to 1002
+2026-08-12 03:28:33|Navigation|Sidebar -> Mini Statement
+2026-08-12 03:28:44|Navigation|Sidebar -> Withdraw
+2026-08-12 03:28:47|Navigation|Sidebar -> Withdraw
+2026-08-12 03:28:47|Navigation|Sidebar -> Transfer
+2026-08-12 03:29:15|Transfer (OTP)|Account 1001 transferred Rs. 500000.000000 to 1002
+2026-08-12 03:29:21|Navigation|Sidebar -> Withdraw
+2026-08-12 03:29:23|Navigation|Sidebar -> Mini Statement
+2026-08-12 03:29:42|ATM Login|Account 1001 logged in
+2026-08-12 03:29:43|Navigation|Sidebar -> Mini Statement
+2026-08-12 03:29:46|Navigation|Sidebar -> Withdraw
+2026-08-12 03:29:53|Withdrawal|Account 1001 withdrew Rs. 5000.000000
+2026-08-12 03:29:57|Navigation|Sidebar -> Transfer
+2026-08-12 03:30:09|Transfer|Account 1001 transferred Rs. 40000.000000 to 1003

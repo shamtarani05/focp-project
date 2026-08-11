@@ -410,3 +410,19 @@
 [2026-08-12 02:49:03] [AUDIT] Navigation: Sidebar -> Daily Report
 [2026-08-12 02:49:03] [AUDIT] Navigation: Sidebar -> Reactivation Req
 [2026-08-12 02:49:05] [AUDIT] Navigation: Sidebar -> Daily Report
+[2026-08-12 03:27:56] [AUDIT] ATM Login: Account 1001 logged in
+[2026-08-12 03:27:59] [AUDIT] Navigation: Sidebar -> Transfer
+[2026-08-12 03:28:21] [AUDIT] Transfer: Account 1001 transferred Rs. 20000.000000 to 1002
+[2026-08-12 03:28:33] [AUDIT] Navigation: Sidebar -> Mini Statement
+[2026-08-12 03:28:44] [AUDIT] Navigation: Sidebar -> Withdraw
+[2026-08-12 03:28:47] [AUDIT] Navigation: Sidebar -> Withdraw
+[2026-08-12 03:28:47] [AUDIT] Navigation: Sidebar -> Transfer
+[2026-08-12 03:29:15] [AUDIT] Transfer (OTP): Account 1001 transferred Rs. 500000.000000 to 1002
+[2026-08-12 03:29:21] [AUDIT] Navigation: Sidebar -> Withdraw
+[2026-08-12 03:29:23] [AUDIT] Navigation: Sidebar -> Mini Statement
+[2026-08-12 03:29:42] [AUDIT] ATM Login: Account 1001 logged in
+[2026-08-12 03:29:43] [AUDIT] Navigation: Sidebar -> Mini Statement
+[2026-08-12 03:29:46] [AUDIT] Navigation: Sidebar -> Withdraw
+[2026-08-12 03:29:53] [AUDIT] Withdrawal: Account 1001 withdrew Rs. 5000.000000
+[2026-08-12 03:29:57] [AUDIT] Navigation: Sidebar -> Transfer
+[2026-08-12 03:30:09] [AUDIT] Transfer: Account 1001 transferred Rs. 40000.000000 to 1003
