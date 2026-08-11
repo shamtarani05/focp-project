@@ -3344,15 +3344,11 @@ static void HandleCommand(int id) {
     }
 
     case BTN_BACK:
-<<<<<<< HEAD
         if (gShowReceipt) {
             CloseReceipt();
-        } else if (g.screen == SCR_CONTACT_ADMIN) {
-=======
-        if (g.screen == SCR_CONTACT_ADMIN || g.screen == SCR_FORGOT_PIN) {
+        } else if (g.screen == SCR_CONTACT_ADMIN || g.screen == SCR_FORGOT_PIN) {
             GoToScreen(SCR_ATM_LOGIN);
         } else if (g.screen == SCR_ADMIN_LOGIN || g.screen == SCR_ATM_LOGIN) {
->>>>>>> 002f831 (forgot pin)
             g.currentAccIdx = -1;
             g.isAdmin = false;
             GoToScreen(SCR_LOGIN);
