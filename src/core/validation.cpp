@@ -131,13 +131,6 @@ bool isNumericDecimal(const string& s) {
     return true;
 }
 
-bool isMultipleOf100(double amount) {
-    if (amount <= 0) return false;
-    long long rounded = (long long)(amount + 0.0001);
-    if (abs(amount - (double)rounded) > 0.001) return false; // not an integer
-    return (rounded % 100 == 0);
-}
-
 bool isMultipleOf500(double amount) {
     if (amount < 500.0) return false;
     long long rounded = (long long)(amount + 0.0001);

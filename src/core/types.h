@@ -203,8 +203,8 @@ const double SAVINGS_INTEREST_RATE  = 0.05;
 const double OTP_THRESHOLD          = 50000.0;
 const int    MAX_PIN_ATTEMPTS       = 3;
 
-const int DENOMINATIONS[]   = {5000, 1000, 500, 100};
-const int NUM_DENOMINATIONS = 4;
+const int DENOMINATIONS[]   = {5000, 1000, 500};
+const int NUM_DENOMINATIONS = 3;
 
 const string VALID_ACCOUNT_TYPES[] = {"savings", "current"};
 const int    NUM_ACCOUNT_TYPES     = 2;

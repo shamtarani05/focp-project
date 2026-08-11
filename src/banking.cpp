@@ -65,7 +65,7 @@ void logAudit(const string& action, const string& details) {
 
 void initCashInventory(vector<CashNote>& inventory) {
     inventory.clear();
-    const int defaultCounts[NUM_DENOMINATIONS] = {100, 200, 300, 500};
+    const int defaultCounts[NUM_DENOMINATIONS] = {100, 200, 300};
     for (int i = 0; i < NUM_DENOMINATIONS; i++) {
         inventory.push_back(CashNote(DENOMINATIONS[i], defaultCounts[i]));
     }
@@ -74,14 +74,16 @@ void initCashInventory(vector<CashNote>& inventory) {
 
 bool dispenseCash(vector<CashNote>& inventory, double amount) {
     int remaining = (int)amount;
-    for (size_t i = 0; i < inventory.size(); i++) {
-        int denom = inventory[i].denomination;
+    vector<CashNote> temp = inventory;
+    for (size_t i = 0; i < temp.size(); i++) {
+        int denom = temp[i].denomination;
         int needed = remaining / denom;
-        int give = (needed < inventory[i].count) ? needed : inventory[i].count;
+        int give = (needed < temp[i].count) ? needed : temp[i].count;
         remaining -= give * denom;
-        inventory[i].count -= give;
+        temp[i].count -= give;
     }
     if (remaining > 0) return false;
+    inventory = temp;
     saveCashInventory(inventory);
     return true;
 }

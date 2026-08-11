@@ -1,5 +1,5 @@
 === DATA INTEGRITY CHECK REPORT ===
 [OK] Accounts loaded successfully. Count: 4
-[OK] Transactions loaded successfully. Count: 2
+[OK] Transactions loaded successfully. Count: 3
 [OK] Loans loaded successfully. Count: 0
 [OK] Audit entries count: 1

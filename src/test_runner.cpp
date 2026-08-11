@@ -47,7 +47,6 @@ int main() {
     assert(isValidCNIC("12345-6789012-3") == true);
     assert(isValidAccountType("savings") == true);
     assert(isValidAccountType("invalid_type") == false);
-    assert(isMultipleOf100(500.0) == true);
     assert(isMultipleOf500(500.0) == true);
     assert(isMultipleOf500(1500.0) == true);
     assert(isMultipleOf500(250.0) == false);

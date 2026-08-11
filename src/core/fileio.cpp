@@ -245,7 +245,7 @@ bool loadCashInventory(vector<CashNote>& inventory) {
         string temp;
         getline(ss, temp, '|'); note.denomination = safeStoi(temp);
         getline(ss, temp, '|'); note.count = safeStoi(temp);
-        if (note.denomination > 0) inventory.push_back(note);
+        if (note.denomination >= 500) inventory.push_back(note);
     }
     file.close();
     return true;
