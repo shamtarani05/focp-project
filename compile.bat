@@ -20,7 +20,7 @@ g++ -std=c++14 -Isrc -o build\banking.exe ^
     src\banking.cpp ^
     src\core\fileio.cpp ^
     src\core\validation.cpp ^
-    -mwindows -lgdi32 -luser32 -lcomctl32
+    -mwindows -lgdi32 -luser32 -lcomctl32 -lole32 -loleaut32
 
 if %errorlevel% neq 0 (
     echo.

@@ -7,6 +7,9 @@
 #include <iomanip>
 #include <algorithm>
 #include <cmath>
+#include <initguid.h>
+#include <sapi.h>
+#include <ole2.h>
 
 
 using namespace Theme;
@@ -14,89 +17,39 @@ using namespace Theme;
 const string ADMIN_PASSWORD = "SAA@Bank#2026";
 
 // ============================
-// VOICE ASSISTANT
+// VOICE ASSISTANT (Native Windows SAPI)
 // ============================
-struct SpeakData {
-    string text;
-};
+static ISpVoice* g_pVoice = NULL;
+static bool g_voiceInit = false;
 
-static HANDLE g_hCurrentSpeechProcess = NULL;
-static CRITICAL_SECTION g_csSpeech;
-static bool g_csSpeechInit = false;
-
-static void InitSpeechCS() {
-    if (!g_csSpeechInit) {
-        InitializeCriticalSection(&g_csSpeech);
-        g_csSpeechInit = true;
+static void InitVoice() {
+    if (!g_voiceInit) {
+        CoInitialize(NULL);
+        HRESULT hr = CoCreateInstance(CLSID_SpVoice, NULL, CLSCTX_ALL, IID_ISpVoice, (void**)&g_pVoice);
+        if (FAILED(hr)) g_pVoice = NULL;
+        g_voiceInit = true;
     }
 }
 
 static void StopCurrentSpeech() {
-    InitSpeechCS();
-    EnterCriticalSection(&g_csSpeech);
-    if (g_hCurrentSpeechProcess != NULL) {
-        TerminateProcess(g_hCurrentSpeechProcess, 0);
-        CloseHandle(g_hCurrentSpeechProcess);
-        g_hCurrentSpeechProcess = NULL;
+    InitVoice();
+    if (g_pVoice) {
+        // SPF_PURGEBEFORESPEAK immediately stops/purges any ongoing or queued speech
+        g_pVoice->Speak(NULL, SPF_PURGEBEFORESPEAK, NULL);
     }
-    LeaveCriticalSection(&g_csSpeech);
-}
-
-static DWORD WINAPI SpeakThread(LPVOID lpParam) {
-    SpeakData* data = (SpeakData*)lpParam;
-    string text = data->text;
-    delete data;
-
-    if (text.empty()) return 0;
-
-    string escaped = text;
-    size_t pos = 0;
-    while ((pos = escaped.find("'", pos)) != string::npos) {
-        escaped.insert(pos, "''");
-        pos += 2;
-    }
-
-    string cmd = "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Add-Type -AssemblyName System.Speech; "
-                 "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; "
-                 "$s.Speak('" + escaped + "')\"";
-
-    SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
-    PROCESS_INFORMATION pi = {};
-    STARTUPINFO si = {};
-    si.cb = sizeof(STARTUPINFO);
-    si.dwFlags = STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-
-    if (CreateProcess(NULL, &cmd[0], &sa, &sa, TRUE,
-                      CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) {
-        InitSpeechCS();
-        EnterCriticalSection(&g_csSpeech);
-        g_hCurrentSpeechProcess = pi.hProcess;
-        LeaveCriticalSection(&g_csSpeech);
-
-        CloseHandle(pi.hThread);
-
-        WaitForSingleObject(pi.hProcess, 8000);
-
-        EnterCriticalSection(&g_csSpeech);
-        if (g_hCurrentSpeechProcess == pi.hProcess) {
-            CloseHandle(pi.hProcess);
-            g_hCurrentSpeechProcess = NULL;
-        }
-        LeaveCriticalSection(&g_csSpeech);
-    }
-    return 0;
 }
 
 static void SpeakText(const string& text) {
     if (text.empty()) return;
-    StopCurrentSpeech();
-
-    SpeakData* data = new SpeakData();
-    data->text = text;
-    HANDLE hThread = CreateThread(NULL, 0, SpeakThread, data, 0, NULL);
-    if (hThread) {
-        CloseHandle(hThread);
+    InitVoice();
+    if (g_pVoice) {
+        int wlen = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, NULL, 0);
+        if (wlen > 0) {
+            wstring wtext(wlen, 0);
+            MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, &wtext[0], wlen);
+            // SPF_ASYNC | SPF_PURGEBEFORESPEAK instantly cancels old speech and speaks new text in 0ms!
+            g_pVoice->Speak(wtext.c_str(), SPF_ASYNC | SPF_PURGEBEFORESPEAK, NULL);
+        }
     }
 }
 
@@ -550,6 +503,7 @@ static LRESULT CALLBACK BtnSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
     case WM_MOUSELEAVE: {
         RemoveProp(hwnd, "HOVER");
         InvalidateRect(hwnd, NULL, FALSE);
+        StopCurrentSpeech();
         break;
     }
     case WM_SETCURSOR: {

@@ -262,3 +262,8 @@
 [2026-08-11 17:16:01] [AUDIT] Loan Rejected: Loan ID #5 rejected for account 1002
 [2026-08-11 17:16:10] [AUDIT] ATM Login: Account 1002 logged in
 [2026-08-11 17:16:20] [AUDIT] Navigation: Sidebar -> Apply Loan
+[2026-08-11 17:17:32] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 17:23:56] [AUDIT] ATM Login: Account 1002 logged in
+[2026-08-11 17:24:11] [AUDIT] Navigation: Sidebar -> Pay Loan
+[2026-08-11 17:24:14] [AUDIT] Navigation: Sidebar -> Change PIN
+[2026-08-11 17:24:15] [AUDIT] Navigation: Sidebar -> Apply Loan
