@@ -98,6 +98,7 @@ static string ScreenGuide(Screen screen) {
         case SCR_OTP:       return "OTP verification. A one time password has been sent for large transfer verification. Please enter the OTP code.";
         case SCR_CONTACT_ADMIN: return "Contact Administrator. Fill in your details and reason to request account reactivation.";
         case SCR_ADMIN_REQUESTS: return "Reactivation Requests. Review and approve or reject account reactivation requests from customers.";
+        case SCR_FORGOT_PIN: return "Forgot PIN. Enter your account number, full name, CNIC, and new PIN to reset your PIN.";
         default: return "";
     }
 }
@@ -149,6 +150,8 @@ enum BtnID {
     BTN_DO_CONTACT_ADMIN,
     BTN_ADMIN_REQUESTS,
     BTN_CONTACT_ADMIN_SCREEN,
+    BTN_FORGOT_PIN_SCREEN,
+    BTN_DO_FORGOT_PIN,
     BTN_NOTIF_REQUESTS,
     BTN_DO_REPAY_INSTALLMENT,
     BTN_DO_REPAY_CUSTOM,
@@ -266,7 +269,6 @@ static const SidebarItem sidebarItems[] = {
     {"Search Account",  SCR_ADMIN_SEARCH,     true},
     {"Freeze Account",  SCR_ADMIN_FREEZE,     true},
     {"Unfreeze Acct",   SCR_ADMIN_UNFREEZE,   true},
-    {"Unlock Account",  SCR_ADMIN_UNLOCK,     true},
     {"Transactions",    SCR_ADMIN_TXNS,       true},
     {"Audit Log",       SCR_ADMIN_AUDIT,      true},
     {"Loans",           SCR_ADMIN_LOANS,      true},
@@ -307,8 +309,8 @@ static void DrawSidebar(HDC hdc, RECT rc, AppState& s) {
     int yStart = HEADER_H + 42;
     int itemH = 38;
 
-    int startIdx = s.isAdmin ? 0 : 14;
-    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
+    int startIdx = s.isAdmin ? 0 : 13;
+    int count = s.isAdmin ? 12 : (NUM_SIDEBAR_ITEMS - 13);
 
     for (int i = 0; i < count; i++) {
         int idx = startIdx + i;
@@ -346,7 +348,7 @@ static void DrawSidebar(HDC hdc, RECT rc, AppState& s) {
 }
 
 static int SidebarHitTest(LPARAM lp, AppState& s) {
-    if (s.screen == SCR_LOGIN || s.screen == SCR_ADMIN_LOGIN || s.screen == SCR_ATM_LOGIN || s.screen == SCR_CONTACT_ADMIN) {
+    if (s.screen == SCR_LOGIN || s.screen == SCR_ADMIN_LOGIN || s.screen == SCR_ATM_LOGIN || s.screen == SCR_CONTACT_ADMIN || s.screen == SCR_FORGOT_PIN) {
         return -1;
     }
     int mx = LOWORD(lp);
@@ -356,8 +358,8 @@ static int SidebarHitTest(LPARAM lp, AppState& s) {
     int yStart = HEADER_H + 42;
     int itemH = 38;
 
-    int startIdx = s.isAdmin ? 0 : 14;
-    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
+    int startIdx = s.isAdmin ? 0 : 13;
+    int count = s.isAdmin ? 12 : (NUM_SIDEBAR_ITEMS - 13);
 
     for (int i = 0; i < count; i++) {
         int y = yStart + i * itemH;
@@ -422,7 +424,7 @@ static void DrawHeader(HDC hdc, RECT rc, AppState& s) {
     Txt(hdc, "Secure Banking Platform", 68, 38, hFontSmall, RGB(148,163,184));
 
     // Show current user/mode label (left-aligned after bank name)
-    bool isPublicScreen = (s.screen == SCR_LOGIN || s.screen == SCR_ADMIN_LOGIN || s.screen == SCR_ATM_LOGIN || s.screen == SCR_CONTACT_ADMIN);
+    bool isPublicScreen = (s.screen == SCR_LOGIN || s.screen == SCR_ADMIN_LOGIN || s.screen == SCR_ATM_LOGIN || s.screen == SCR_CONTACT_ADMIN || s.screen == SCR_FORGOT_PIN);
     const char* modeLabel = (s.isAdmin && !isPublicScreen) ? "Admin Portal" :
                             (!s.isAdmin && s.currentAccIdx >= 0 && !isPublicScreen ? "ATM Session" : "");
     if (modeLabel[0] != '\0') {
@@ -503,6 +505,14 @@ static void ClearControls() {
 }
 
 static WNDPROC gOldBtnProc = NULL;
+static WNDPROC gOldEditProc = NULL;
+
+static LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    if (msg == WM_LBUTTONDOWN) {
+        SetFocus(hwnd);
+    }
+    return CallWindowProc(gOldEditProc, hwnd, msg, wp, lp);
+}
 
 static LRESULT CALLBACK BtnSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
@@ -537,7 +547,7 @@ static LRESULT CALLBACK BtnSubclassProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
 
 static HWND MakeBtn(int id, const char* text, int x, int y, int w, int h, int color) {
     HWND hw = CreateWindow("BUTTON", text,
-        WS_CHILD|WS_VISIBLE|BS_OWNERDRAW,
+        WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_OWNERDRAW,
         x, y, w, h, gHwnd, (HMENU)(LONG_PTR)id, NULL, NULL);
     SetWindowLongPtr(hw, GWL_USERDATA, color);
     if (!gOldBtnProc) {
@@ -550,11 +560,15 @@ static HWND MakeBtn(int id, const char* text, int x, int y, int w, int h, int co
 }
 
 static HWND MakeEdit(int id, int x, int y, int w, int h, bool pwd = false) {
-    DWORD style = WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL;
+    DWORD style = WS_CHILD|WS_VISIBLE|WS_TABSTOP|ES_AUTOHSCROLL;
     if (pwd) style |= ES_PASSWORD;
     HWND hw = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "",
         style, x, y, w, h, gHwnd, (HMENU)(LONG_PTR)id, NULL, NULL);
     SendMessage(hw, WM_SETFONT, (WPARAM)hFontNormal, TRUE);
+    if (!gOldEditProc) {
+        gOldEditProc = (WNDPROC)GetWindowLongPtr(hw, GWLP_WNDPROC);
+    }
+    SetWindowLongPtr(hw, GWLP_WNDPROC, (LONG_PTR)EditSubclassProc);
     EditInfo ei = {id, hw};
     gEdits.push_back(ei);
     return hw;
@@ -668,7 +682,7 @@ static void PaintATMLoginScreen(HDC hdc, RECT rc) {
     int cx = rc.right / 2;
     int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
 
-    DrawCard(hdc, cx - 220, cy - 150, 440, 330);
+    DrawCard(hdc, cx - 220, cy - 150, 440, 385);
     TxtCenter(hdc, "ATM Customer Login", cx - 220, cy - 125, 440, 32, hFontTitle, Primary);
     TxtCenter(hdc, "Enter your account number and PIN to access ATM services", cx - 220, cy - 90, 440, 20, hFontSmall, TextLight);
 
@@ -1421,6 +1435,40 @@ static void PaintAdminUnlock(HDC hdc, RECT rc) {
 }
 
 // ============================
+// FORGOT PIN SCREEN (ATM side) - Standalone Page
+// ============================
+static void PaintForgotPIN(HDC hdc, RECT rc) {
+    int cx = rc.right / 2;
+    int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+    int cw = 640;
+    int ch = 440;
+    int cardX = cx - cw / 2;
+    int cardY = cy - ch / 2;
+
+    // Title & Subtitle centered above card
+    TxtCenter(hdc, "Forgot / Reset PIN", 0, cardY - 60, rc.right, 30, hFontHeading, Primary);
+    TxtCenter(hdc, "Verify your Full Name and CNIC to set a new 4-digit PIN for your account", 0, cardY - 30, rc.right, 20, hFontSmall, TextLight);
+
+    // Card Container
+    DrawCard(hdc, cardX, cardY, cw, ch);
+
+    // Field labels inside card
+    Txt(hdc, "Account Number:", cardX + 40, cardY + 28,  hFontBold, Text);
+    Txt(hdc, "Full Name:",      cardX + 40, cardY + 78,  hFontBold, Text);
+    Txt(hdc, "CNIC:",           cardX + 40, cardY + 128, hFontBold, Text);
+    Txt(hdc, "New PIN:",        cardX + 40, cardY + 178, hFontBold, Text);
+    Txt(hdc, "Confirm PIN:",    cardX + 40, cardY + 228, hFontBold, Text);
+
+    // Info note box inside card bottom
+    HBRUSH noteBg = CreateSolidBrush(RGB(239, 246, 255));
+    HPEN notePen = CreatePen(PS_SOLID, 1, RGB(147, 197, 253));
+    RoundRect2(hdc, cardX + 30, cardY + 355, cw - 60, 48, 8, noteBg, notePen);
+    DeleteObject(noteBg);
+    DeleteObject(notePen);
+    TxtCenter(hdc, "Enter your registered CNIC and Full Name to reset your PIN securely.", cardX + 30, cardY + 369, cw - 60, 20, hFontSmall, RGB(30, 64, 175));
+}
+
+// ============================
 // CONTACT ADMIN SCREEN (ATM side) - Standalone Page
 // ============================
 static void PaintContactAdmin(HDC hdc, RECT rc) {
@@ -1965,7 +2013,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
     FillRect(hdc, &rc, hBrushBg);
     DrawHeader(hdc, rc, g);
 
-    if (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_ATM_LOGIN && g.screen != SCR_CONTACT_ADMIN) {
+    if (g.screen != SCR_LOGIN && g.screen != SCR_ADMIN_LOGIN && g.screen != SCR_ATM_LOGIN && g.screen != SCR_CONTACT_ADMIN && g.screen != SCR_FORGOT_PIN) {
         DrawSidebar(hdc, rc, g);
     }
 
@@ -1998,6 +2046,7 @@ static void PaintScreen(HDC hdc, RECT rc) {
         case SCR_ATM_APPLY_LOAN: PaintATMApplyLoan(hdc, rc); break;
         case SCR_OTP: PaintOTPScreen(hdc, rc); break;
         case SCR_CONTACT_ADMIN: PaintContactAdmin(hdc, rc); break;
+        case SCR_FORGOT_PIN: PaintForgotPIN(hdc, rc); break;
         case SCR_ADMIN_REQUESTS: PaintAdminRequests(hdc, rc); break;
     }
 
@@ -2024,7 +2073,7 @@ static void CreateScreenControls() {
     int edH = 34;
 
     // Header buttons (Logout / Backup + Notification Bell)
-    bool isPublicScreen = (g.screen == SCR_LOGIN || g.screen == SCR_ADMIN_LOGIN || g.screen == SCR_ATM_LOGIN || g.screen == SCR_CONTACT_ADMIN);
+    bool isPublicScreen = (g.screen == SCR_LOGIN || g.screen == SCR_ADMIN_LOGIN || g.screen == SCR_ATM_LOGIN || g.screen == SCR_CONTACT_ADMIN || g.screen == SCR_FORGOT_PIN);
     if (g.isAdmin && !isPublicScreen) {
         MakeBtn(BTN_NOTIF_REQUESTS, "",            rc.right - 280, 14, 42, 36, RGB(30,41,59));
         MakeBtn(BTN_DO_BACKUP,     "Backup Data", rc.right - 225, 14, 115, 36, Primary);
@@ -2050,7 +2099,12 @@ static void CreateScreenControls() {
         MakeEdit(EDT_PIN,             cx - 20,  cy + 10, 190, 34, true);
         MakeBtn(BTN_DO_LOGIN,        "Login",  cx - 170, cy + 65, 160, 40, Success);
         MakeBtn(BTN_BACK,            "Back",   cx + 10,  cy + 65, 160, 40, RGB(100, 116, 139));
-        MakeBtn(BTN_CONTACT_ADMIN_SCREEN, "Account Blocked? Contact Admin", cx - 170, cy + 120, 340, 36, Warning);
+        MakeBtn(BTN_FORGOT_PIN_SCREEN, "Forgot PIN?", cx - 170, cy + 118, 340, 36, Primary);
+        MakeBtn(BTN_CONTACT_ADMIN_SCREEN, "Account Blocked? Contact Admin", cx - 170, cy + 162, 340, 36, Warning);
+
+        if (g.pendingReactivationAccNo > 0) {
+            SetEditText(EDT_ACCNO, to_string(g.pendingReactivationAccNo));
+        }
         break;
     }
     case SCR_ADMIN_LOGIN: {
@@ -2273,6 +2327,30 @@ static void CreateScreenControls() {
         MakeBtn(BTN_BACK,             "Back",           edtX + 185, cardY + 235, 120, 42, RGB(100,116,139));
         break;
     }
+    case SCR_FORGOT_PIN: {
+        int cx = rc.right / 2;
+        int cy = HEADER_H + (rc.bottom - HEADER_H - STATUS_H) / 2;
+        int cw = 640;
+        int ch = 440;
+        int cardX = cx - cw / 2;
+        int cardY = cy - ch / 2;
+
+        int edtX = cardX + 210;
+        int edtW = 380;
+        MakeEdit(EDT_ACCNO,      edtX, cardY + 24,  edtW, 34);
+        MakeEdit(EDT_NAME,       edtX, cardY + 74,  edtW, 34);
+        MakeEdit(EDT_CNIC,       edtX, cardY + 124, edtW, 34);
+        MakeEdit(EDT_NEWPIN,     edtX, cardY + 174, edtW, 34, true);
+        MakeEdit(EDT_CONFIRMPIN, edtX, cardY + 224, edtW, 34, true);
+
+        if (g.pendingReactivationAccNo > 0) {
+            SetEditText(EDT_ACCNO, to_string(g.pendingReactivationAccNo));
+        }
+
+        MakeBtn(BTN_DO_FORGOT_PIN, "Reset PIN", edtX,       cardY + 285, 170, 42, Success);
+        MakeBtn(BTN_BACK,          "Back",      edtX + 185, cardY + 285, 120, 42, RGB(100,116,139));
+        break;
+    }
     case SCR_ADMIN_REQUESTS: {
         int colX[] = {sx + 15, sx + 65, sx + 180, sx + 320, sx + 435, sx + 550, sx + 665};
         int rowY = sy + 100;
@@ -2304,6 +2382,7 @@ static void CreateScreenControls() {
 static void HandleCommand(int id) {
     if (id == BTN_LOGOUT) {
         g.currentAccIdx = -1;
+        g.isAdmin = false;
         GoToScreen(SCR_LOGIN);
         return;
     }
@@ -2319,6 +2398,16 @@ static void HandleCommand(int id) {
     // Handle the "Contact Admin" navigation button (appears on ATM login for locked/frozen)
     if (id == BTN_CONTACT_ADMIN_SCREEN) {
         GoToScreen(SCR_CONTACT_ADMIN);
+        return;
+    }
+
+    // Handle the "Forgot PIN?" navigation button
+    if (id == BTN_FORGOT_PIN_SCREEN) {
+        string accStr = GetEditText(EDT_ACCNO);
+        if (!accStr.empty() && isNumeric(accStr)) {
+            g.pendingReactivationAccNo = atoi(accStr.c_str());
+        }
+        GoToScreen(SCR_FORGOT_PIN);
         return;
     }
 
@@ -2691,6 +2780,76 @@ static void HandleCommand(int id) {
                  " submitted reactivation request #" + to_string(req.requestId));
         SetStatus("Request submitted! The admin will review it shortly.", 1);
         SpeakText("Your reactivation request has been submitted. Please wait for admin approval.");
+        GoToScreen(SCR_ATM_LOGIN);
+        break;
+    }
+
+    case BTN_DO_FORGOT_PIN: {
+        string accStr     = GetEditText(EDT_ACCNO);
+        string name       = GetEditText(EDT_NAME);
+        string cnic       = GetEditText(EDT_CNIC);
+        string newPin     = GetEditText(EDT_NEWPIN);
+        string confirmPin = GetEditText(EDT_CONFIRMPIN);
+
+        if (accStr.empty() || !isNumeric(accStr)) { SetStatus("Please enter a valid numeric account number", 2); break; }
+        if (!isValidName(name))   { SetStatus("Please enter your full name (letters and spaces only)", 2); break; }
+        if (!isValidCNIC(cnic))   { SetStatus("Please enter a valid CNIC (XXXXX-XXXXXXX-X)", 2); break; }
+        if (!isValidPIN(newPin))  { SetStatus("New PIN must be exactly 4 numeric digits", 2); break; }
+        if (newPin != confirmPin) { SetStatus("New PIN confirmation does not match!", 2); break; }
+
+        int accNo = atoi(accStr.c_str());
+        if (accNo <= 0) { SetStatus("Invalid account number", 2); break; }
+
+        loadAccounts(g.accounts);
+        int accIdx = findAccountIndex(accNo, g.accounts);
+        if (accIdx < 0) { SetStatus("Account not found. Check your account number.", 2); break; }
+
+        // Verify CNIC matches registered account details
+        string cleanedInputCnic, cleanedRegCnic;
+        for (char c : cnic) if (c != '-' && c != ' ') cleanedInputCnic += c;
+        for (char c : g.accounts[accIdx].cnic) if (c != '-' && c != ' ') cleanedRegCnic += c;
+        if (cleanedInputCnic != cleanedRegCnic) {
+            SetStatus("CNIC does not match the registered account details!", 2);
+            break;
+        }
+
+        // Verify Full Name matches registered account details (case-insensitive & trimmed)
+        auto trimStr = [](const string& s) {
+            size_t start = s.find_first_not_of(" \t\r\n");
+            if (start == string::npos) return string("");
+            size_t end = s.find_last_not_of(" \t\r\n");
+            return s.substr(start, end - start + 1);
+        };
+
+        string trimmedInput = trimStr(name);
+        string trimmedReg   = trimStr(g.accounts[accIdx].name);
+
+        bool nameMatch = (trimmedInput.length() == trimmedReg.length());
+        if (nameMatch) {
+            for (size_t i = 0; i < trimmedInput.length(); i++) {
+                if (tolower((unsigned char)trimmedInput[i]) != tolower((unsigned char)trimmedReg[i])) {
+                    nameMatch = false;
+                    break;
+                }
+            }
+        }
+
+        if (!nameMatch) {
+            SetStatus("Full Name does not match the registered account holder!", 2);
+            break;
+        }
+
+        // Reset PIN and reactivate account
+        g.accounts[accIdx].pinHash = encodePIN(newPin);
+        g.accounts[accIdx].pinAttempts = 0;
+        g.accounts[accIdx].status = "active";
+        saveAccounts(g.accounts);
+
+        logAudit("Forgot PIN Reset", "Account " + to_string(accNo) + " PIN reset successfully");
+        SetStatus("PIN reset successfully! You can now log in with your new PIN.", 1);
+        SpeakText("PIN reset successfully. You can now log in with your new PIN.");
+
+        g.pendingReactivationAccNo = accNo;
         GoToScreen(SCR_ATM_LOGIN);
         break;
     }
@@ -3199,14 +3358,18 @@ static void HandleCommand(int id) {
     case BTN_BACK:
         if (gShowReceipt) {
             CloseReceipt();
-        } else if (g.screen == SCR_CONTACT_ADMIN) {
+        } else if (g.screen == SCR_CONTACT_ADMIN || g.screen == SCR_FORGOT_PIN) {
+            GoToScreen(SCR_ATM_LOGIN);
+        } else if (g.screen == SCR_ADMIN_LOGIN || g.screen == SCR_ATM_LOGIN) {
             g.currentAccIdx = -1;
+            g.isAdmin = false;
             GoToScreen(SCR_LOGIN);
         } else if (g.isAdmin) {
             GoToScreen(SCR_ADMIN_DASH);
         } else if (g.currentAccIdx >= 0) {
             GoToScreen(SCR_ATM_MENU);
         } else {
+            g.isAdmin = false;
             GoToScreen(SCR_LOGIN);
         }
         break;
@@ -3308,6 +3471,9 @@ static void GoToScreen(Screen scr) {
     // Close any open receipt overlay when navigating
     gShowReceipt = false;
 
+    if (scr == SCR_LOGIN) {
+        g.isAdmin = false;
+    }
     g.screen = scr;
     g.statusMsg.clear();
     if (scr == SCR_ADMIN_TXNS || scr == SCR_ADMIN_SEARCH_TXN) {

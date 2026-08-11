@@ -154,7 +154,6 @@ static const SidebarItem sidebarItems[] = {
     {"Search Account",  SCR_ADMIN_SEARCH,     true},
     {"Freeze Account",  SCR_ADMIN_FREEZE,     true},
     {"Unfreeze Acct",   SCR_ADMIN_UNFREEZE,   true},
-    {"Unlock Account",  SCR_ADMIN_UNLOCK,     true},
     {"Transactions",    SCR_ADMIN_TXNS,       true},
     {"Search Txns",     SCR_ADMIN_SEARCH_TXN, true},
     {"Audit Log",       SCR_ADMIN_AUDIT,      true},
@@ -188,10 +187,10 @@ static void DrawSidebar(HDC hdc, RECT rc, AppState& s) {
     int count = 0;
     if (s.isAdmin) {
         startIdx = 0;
-        count = 13;
+        count = 12;
     } else {
-        startIdx = 14;
-        count = NUM_SIDEBAR_ITEMS - 14;
+        startIdx = 13;
+        count = NUM_SIDEBAR_ITEMS - 13;
     }
 
     for (int i = 0; i < count; i++) {
@@ -231,8 +230,8 @@ static int SidebarHitTest(LPARAM lp, AppState& s) {
     int yStart = HEADER_H + 65;
     int itemH = 36;
 
-    int startIdx = s.isAdmin ? 0 : 14;
-    int count = s.isAdmin ? 13 : (NUM_SIDEBAR_ITEMS - 14);
+    int startIdx = s.isAdmin ? 0 : 13;
+    int count = s.isAdmin ? 12 : (NUM_SIDEBAR_ITEMS - 13);
 
     for (int i = 0; i < count; i++) {
         int y = yStart + i * itemH;
