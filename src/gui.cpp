@@ -798,7 +798,7 @@ static void PaintAdminDash(HDC hdc, RECT rc) {
 
     int rowY = recentY + 35;
     int shown = min((int)g.transactions.size(), 10);
-    for (int i = shown - 1; i >= 0; i--) {
+    for (int i = (int)g.transactions.size() - 1; i >= 0 && i >= (int)g.transactions.size() - shown; i--) {
         if (rowY > recentY + ch - 170) break;
         auto& t = g.transactions[i];
         Txt(hdc, t.transactionID.c_str(), colX[0], rowY, hFontMono, Text);
@@ -1177,7 +1177,7 @@ static void PaintATMMiniState(HDC hdc, RECT rc) {
     }
 
     int shown = min((int)filtered.size(), 15);
-    for (int i = shown - 1; i >= 0; i--) {
+    for (int i = (int)filtered.size() - 1; i >= 0 && i >= (int)filtered.size() - shown; i--) {
         if (rowY > sy + ch - 30) break;
         auto& t = filtered[i];
         Txt(hdc, t.transactionID.c_str(), colX[0], rowY, hFontMono, Text);
@@ -1185,7 +1185,7 @@ static void PaintATMMiniState(HDC hdc, RECT rc) {
 
         stringstream ss;
         ss << "Rs. " << fixed << setprecision(2) << t.amount;
-        COLORREF clr = (t.type=="deposit") ? Success : Error;
+        COLORREF clr = (t.type == "deposit") ? Success : (t.type == "withdrawal" ? Error : Secondary);
         Txt(hdc, ss.str().c_str(), colX[2], rowY, hFontNormal, clr);
 
         Txt(hdc, t.dateTime.substr(0,10).c_str(), colX[3], rowY, hFontSmall, TextLight);
@@ -2034,9 +2034,6 @@ static void PaintReceiptOverlay(HDC hdc, RECT rc) {
     LineTo(hdc, cardX + cw - 25, cardY + ch - 70);
     SelectObject(hdc, oldPen);
     DeleteObject(sepPen);
-
-    // Footer message
-    TxtCenter(hdc, "Thank you for banking with us!", cardX, cardY + ch - 60, cw, 20, hFontSmall, TextLight);
 }
 
 // ============================
@@ -2908,6 +2905,7 @@ static void HandleCommand(int id) {
         if (amt > 1000000.0) { SetStatus("Maximum single deposit limit is Rs. 1,000,000", 2); break; }
 
         loadAccounts(g.accounts);
+        loadTransactions(g.transactions);
         auto& acc = g.accounts[g.currentAccIdx];
         if (acc.status != "active") { SetStatus("Account is frozen or locked. Cannot deposit.", 2); break; }
 
@@ -2947,6 +2945,8 @@ static void HandleCommand(int id) {
         if (!isMultipleOf500(amt)) { SetStatus("Withdrawal amount must be at least Rs. 500 and in multiples of 500 (e.g. 500, 1000, 1500)", 2); break; }
         if (amt > 100000.0) { SetStatus("Maximum single withdrawal limit is Rs. 100,000", 2); break; }
 
+        loadAccounts(g.accounts);
+        loadTransactions(g.transactions);
         auto& acc = g.accounts[g.currentAccIdx];
         if (acc.status != "active") { SetStatus("Account is not active", 2); break; }
         if (acc.balance < amt) { SetStatus("Insufficient account balance", 2); break; }
@@ -3075,6 +3075,8 @@ static void HandleCommand(int id) {
             return;
         }
 
+        loadAccounts(g.accounts);
+        loadTransactions(g.transactions);
         g.accounts[senderIdx].balance -= amt;
         g.accounts[receiverIdx].balance += amt;
         saveAccounts(g.accounts);
@@ -3503,6 +3505,9 @@ static void HandleCommand(int id) {
         g.accounts[receiverIdx].balance += amt;
         saveAccounts(g.accounts);
 
+        loadAccounts(g.accounts);
+        loadTransactions(g.transactions);
+
         Transaction txn;
         txn.transactionID = generateTransactionID(g.transactions);
         txn.accountNo = g.accounts[senderIdx].accountNo;
@@ -3575,7 +3580,7 @@ static void GoToScreen(Screen scr) {
     }
     g.screen = scr;
     g.statusMsg.clear();
-    if (scr == SCR_ADMIN_TXNS || scr == SCR_ADMIN_SEARCH_TXN) {
+    if (scr == SCR_ADMIN_TXNS || scr == SCR_ADMIN_SEARCH_TXN || scr == SCR_ATM_MINISTATE) {
         loadTransactions(g.transactions);
     }
     // Keep reactivation request list fresh for the notification badge

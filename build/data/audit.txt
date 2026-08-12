@@ -921,3 +921,138 @@
 2026-08-12 03:29:53|Withdrawal|Account 1001 withdrew Rs. 5000.000000
 2026-08-12 03:29:57|Navigation|Sidebar -> Transfer
 2026-08-12 03:30:09|Transfer|Account 1001 transferred Rs. 40000.000000 to 1003
+2026-08-12 09:41:58|ATM Login|Account 1002 logged in
+2026-08-12 09:42:00|Navigation|Sidebar -> ATM Balance
+2026-08-12 09:42:01|Navigation|Sidebar -> Deposit
+2026-08-12 09:42:01|Navigation|Sidebar -> Withdraw
+2026-08-12 09:42:02|Navigation|Sidebar -> Transfer
+2026-08-12 09:42:03|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:42:04|Navigation|Sidebar -> Change PIN
+2026-08-12 09:42:05|Navigation|Sidebar -> Pay Loan
+2026-08-12 09:42:05|Navigation|Sidebar -> Apply Loan
+2026-08-12 09:42:06|Navigation|Sidebar -> ATM Info
+2026-08-12 09:42:08|Navigation|Sidebar -> Apply Loan
+2026-08-12 09:42:09|Navigation|Sidebar -> Pay Loan
+2026-08-12 09:42:10|Navigation|Sidebar -> Change PIN
+2026-08-12 09:42:10|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:42:20|Navigation|Sidebar -> ATM Balance
+2026-08-12 09:42:22|Navigation|Sidebar -> Deposit
+2026-08-12 09:42:24|Navigation|Sidebar -> ATM Balance
+2026-08-12 09:42:27|Navigation|Sidebar -> Deposit
+2026-08-12 09:42:33|Navigation|Sidebar -> Withdraw
+2026-08-12 09:42:37|Withdrawal|Account 1002 withdrew Rs. 50000.000000
+2026-08-12 09:42:53|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:43:01|Navigation|Sidebar -> ATM Balance
+2026-08-12 09:43:03|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:43:08|Navigation|Sidebar -> Transfer
+2026-08-12 09:43:29|Transfer (OTP)|Account 1002 transferred Rs. 50000.000000 to 1001
+2026-08-12 09:43:34|Navigation|Sidebar -> ATM Balance
+2026-08-12 09:43:35|Navigation|Sidebar -> Deposit
+2026-08-12 09:43:39|Deposit|Account 1002 deposited Rs. 500.000000
+2026-08-12 09:45:31|Navigation|Sidebar -> Change PIN
+2026-08-12 09:45:31|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:45:37|Navigation|Sidebar -> Pay Loan
+2026-08-12 09:45:38|Navigation|Sidebar -> Apply Loan
+2026-08-12 09:45:39|Navigation|Sidebar -> Change PIN
+2026-08-12 09:45:40|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:45:41|Navigation|Sidebar -> Withdraw
+2026-08-12 09:46:00|Navigation|Sidebar -> Deposit
+2026-08-12 09:46:06|Deposit|Account 1002 deposited Rs. 6000.000000
+2026-08-12 09:47:49|Navigation|Sidebar -> Withdraw
+2026-08-12 09:47:49|Navigation|Sidebar -> Transfer
+2026-08-12 09:47:50|Navigation|Sidebar -> Change PIN
+2026-08-12 09:47:51|Navigation|Sidebar -> Pay Loan
+2026-08-12 09:47:52|Navigation|Sidebar -> Apply Loan
+2026-08-12 09:47:52|Navigation|Sidebar -> ATM Info
+2026-08-12 09:48:02|Admin Login|Administrator logged in
+2026-08-12 09:48:06|Navigation|Sidebar -> Create Account
+2026-08-12 09:48:07|Navigation|Sidebar -> Create Account
+2026-08-12 09:48:08|Navigation|Sidebar -> View Accounts
+2026-08-12 09:48:09|Navigation|Sidebar -> View Accounts
+2026-08-12 09:48:10|Navigation|Sidebar -> Search Account
+2026-08-12 09:48:11|Navigation|Sidebar -> View Accounts
+2026-08-12 09:48:14|Navigation|Sidebar -> Freeze Account
+2026-08-12 09:48:15|Navigation|Sidebar -> Freeze Account
+2026-08-12 09:48:15|Navigation|Sidebar -> Unfreeze Acct
+2026-08-12 09:48:16|Navigation|Sidebar -> Transactions
+2026-08-12 09:48:22|Navigation|Sidebar -> Audit Log
+2026-08-12 09:48:23|Navigation|Sidebar -> Loans
+2026-08-12 09:48:24|Navigation|Sidebar -> Cash Inventory
+2026-08-12 09:48:25|Navigation|Sidebar -> Daily Report
+2026-08-12 09:48:27|Navigation|Sidebar -> Reactivation Req
+2026-08-12 09:48:28|Navigation|Sidebar -> Daily Report
+2026-08-12 09:48:30|Navigation|Sidebar -> Search Account
+2026-08-12 09:48:32|Navigation|Sidebar -> Daily Report
+2026-08-12 09:49:51|ATM Login|Account 1002 logged in
+2026-08-12 09:49:53|Navigation|Sidebar -> Deposit
+2026-08-12 09:49:56|Deposit|Account 1002 deposited Rs. 1000.000000
+2026-08-12 09:50:28|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:50:38|Navigation|Sidebar -> Transfer
+2026-08-12 09:50:54|Transfer (OTP)|Account 1002 transferred Rs. 50000.000000 to 1003
+2026-08-12 09:51:00|Navigation|Sidebar -> Mini Statement
+2026-08-12 09:51:14|Navigation|Sidebar -> Transfer
+2026-08-12 09:51:35|Transfer (OTP)|Account 1002 transferred Rs. 60000.000000 to 1001
+2026-08-12 09:51:39|Navigation|Sidebar -> Mini Statement
+2026-08-12 10:00:58|ATM Login|Account 1002 logged in
+2026-08-12 10:01:01|Navigation|Sidebar -> Mini Statement
+2026-08-12 10:01:04|Navigation|Sidebar -> Deposit
+2026-08-12 10:01:05|Navigation|Sidebar -> Withdraw
+2026-08-12 10:01:13|Navigation|Sidebar -> Deposit
+2026-08-12 10:01:27|Navigation|Sidebar -> Transfer
+2026-08-12 10:01:46|Transfer (OTP)|Account 1002 transferred Rs. 60000.000000 to 1003
+2026-08-12 10:01:52|Navigation|Sidebar -> ATM Balance
+2026-08-12 10:01:55|Navigation|Sidebar -> Deposit
+2026-08-12 10:01:56|Navigation|Sidebar -> Withdraw
+2026-08-12 10:01:57|Navigation|Sidebar -> Transfer
+2026-08-12 10:01:58|Navigation|Sidebar -> Mini Statement
+2026-08-12 10:02:09|Navigation|Sidebar -> Change PIN
+2026-08-12 10:02:12|Navigation|Sidebar -> Withdraw
+2026-08-12 10:02:14|Navigation|Sidebar -> Deposit
+2026-08-12 10:02:16|Navigation|Sidebar -> Deposit
+2026-08-12 10:02:17|Navigation|Sidebar -> Transfer
+2026-08-12 10:02:18|Navigation|Sidebar -> Withdraw
+2026-08-12 10:02:23|Navigation|Sidebar -> Mini Statement
+2026-08-12 10:02:25|Navigation|Sidebar -> Change PIN
+2026-08-12 10:02:28|Navigation|Sidebar -> Pay Loan
+2026-08-12 10:02:30|Navigation|Sidebar -> Pay Loan
+2026-08-12 10:02:31|Navigation|Sidebar -> Apply Loan
+2026-08-12 10:02:33|Navigation|Sidebar -> Pay Loan
+2026-08-12 10:02:37|Navigation|Sidebar -> ATM Info
+2026-08-12 10:03:18|Admin Login|Administrator logged in
+2026-08-12 10:03:29|Navigation|Sidebar -> Create Account
+2026-08-12 10:03:30|Navigation|Sidebar -> View Accounts
+2026-08-12 10:03:31|Navigation|Sidebar -> Search Account
+2026-08-12 10:03:33|Navigation|Sidebar -> Freeze Account
+2026-08-12 10:03:34|Navigation|Sidebar -> Search Account
+2026-08-12 10:03:39|Navigation|Sidebar -> Freeze Account
+2026-08-12 10:03:40|Navigation|Sidebar -> Unfreeze Acct
+2026-08-12 10:03:41|Navigation|Sidebar -> Transactions
+2026-08-12 10:03:58|Navigation|Sidebar -> Audit Log
+2026-08-12 10:04:00|Navigation|Sidebar -> Loans
+2026-08-12 10:04:07|Navigation|Sidebar -> Cash Inventory
+2026-08-12 10:04:10|Navigation|Sidebar -> Daily Report
+2026-08-12 10:04:13|Navigation|Sidebar -> Reactivation Req
+2026-08-12 10:04:20|Navigation|Sidebar -> Loans
+2026-08-12 10:04:23|Navigation|Sidebar -> Reactivation Req
+2026-08-12 10:04:25|Navigation|Sidebar -> Cash Inventory
+2026-08-12 10:04:26|Navigation|Sidebar -> Loans
+2026-08-12 10:04:28|Navigation|Sidebar -> Reactivation Req
+2026-08-12 10:04:39|ATM Login|Account 1002 logged in
+2026-08-12 10:04:41|Navigation|Sidebar -> Apply Loan
+2026-08-12 10:04:51|Loan Application|Account 1002 requested loan #6 of Rs. 5000.000000
+2026-08-12 10:05:05|Admin Login|Administrator logged in
+2026-08-12 10:05:12|Navigation|Sidebar -> Reactivation Req
+2026-08-12 10:05:13|Navigation|Sidebar -> Loans
+2026-08-12 10:05:23|Loan Approved|Loan ID #6 approved for account 1002
+2026-08-12 10:05:32|ATM Login|Account 1002 logged in
+2026-08-12 10:05:34|Navigation|Sidebar -> Pay Loan
+2026-08-12 10:05:38|Loan Repayment|Account 1002 paid Rs. 5000.000000 towards Loan #6
+2026-08-12 10:05:40|Navigation|Sidebar -> Change PIN
+2026-08-12 10:05:42|Navigation|Sidebar -> Apply Loan
+2026-08-12 10:05:48|Loan Application|Account 1002 requested loan #7 of Rs. 50000.000000
+2026-08-12 10:06:04|Admin Login|Administrator logged in
+2026-08-12 10:06:09|Navigation|Sidebar -> Reactivation Req
+2026-08-12 10:06:12|Navigation|Sidebar -> Loans
+2026-08-12 10:06:31|Loan Rejected|Loan ID #7 rejected for account 1002
+2026-08-12 10:06:39|ATM Login|Account 1002 logged in
+2026-08-12 10:06:40|Navigation|Sidebar -> Apply Loan
